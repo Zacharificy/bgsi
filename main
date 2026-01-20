@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 
 getgenv().Functions = {
     AutoRebirthMachine = false,
-    AutoBlowBubbles = true
+    AutoBlowBubbles = false
 }
 
 local REBIRTH_INTERVAL = 3600
@@ -15,7 +15,7 @@ local REBIRTH_INTERVAL = 3600
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by Adolf Hitler",
+    LoadingSubtitle = "by NIGGAZINPARIS",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -91,6 +91,12 @@ local function useRebirthMachine()
     
     if #validPets < 5 then
         statusLabel:Set("Status: Not enough pets (" .. #validPets .. "/5)")
+        Rayfield:Notify({
+            Title = "Not Enough Pets",
+            Content = "Need 5 pets, found: " .. #validPets,
+            Duration = 3,
+            Image = nil,
+        })
         return false
     end
     
@@ -98,6 +104,8 @@ local function useRebirthMachine()
     for i = 1, 5 do
         table.insert(selectedPets, validPets[i])
     end
+    
+    statusLabel:Set("Status: Attempting to use machine...")
     
     local args = {
         "UseRebirthMachine",
@@ -108,11 +116,25 @@ local function useRebirthMachine()
         return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
     end)
     
+    task.wait(0.5)
+    
     if success then
         statusLabel:Set("Status: Machine used successfully!")
+        Rayfield:Notify({
+            Title = "Success",
+            Content = "Rebirth machine used with 5 pets!",
+            Duration = 3,
+            Image = nil,
+        })
         return true
     else
         statusLabel:Set("Status: Machine failed - " .. tostring(result))
+        Rayfield:Notify({
+            Title = "Failed",
+            Content = "Error: " .. tostring(result),
+            Duration = 4,
+            Image = nil,
+        })
         return false
     end
 end
@@ -174,35 +196,49 @@ local UtilitySection = UtilityTab:CreateSection("Script Control")
 UtilityTab:CreateButton({
     Name = "Check Pet Count",
     Callback = function()
-        local validPets = getValidSecretPets()
         local args = {"GetExisting", "Giant Bongo Kitty"}
         local success, result = pcall(function()
             return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
         end)
         
-        local debugInfo = "Valid pets found: " .. #validPets .. "\n"
         if success and result then
+            print("=== RAW RESULT ===")
+            print("Type:", type(result))
+            
             if type(result) == "table" then
-                debugInfo = debugInfo .. "Table size: " .. tostring(#result) .. "\n"
-                debugInfo = debugInfo .. "Table pairs count: "
+                print("Table length (#):", #result)
+                print("Table pairs:")
                 local count = 0
-                for k,v in pairs(result) do
+                for k, v in pairs(result) do
                     count = count + 1
+                    print("  Key:", k, "Type:", type(k), "| Value:", v, "Type:", type(v))
                 end
-                debugInfo = debugInfo .. count
+                print("Total pairs:", count)
             else
-                debugInfo = debugInfo .. "Result type: " .. type(result)
+                print("Value:", result)
             end
+            
+            local validPets = getValidSecretPets()
+            print("Valid pets extracted:", #validPets)
+            for i, pet in ipairs(validPets) do
+                print("  Pet", i, ":", pet)
+            end
+            
+            Rayfield:Notify({
+                Title = "Check Console (F9)",
+                Content = "Pet data printed to console. Found: " .. #validPets,
+                Duration = 5,
+                Image = nil,
+            })
         else
-            debugInfo = debugInfo .. "Failed to get data: " .. tostring(result)
+            print("Failed to get pets:", result)
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Failed to get pet data",
+                Duration = 3,
+                Image = nil,
+            })
         end
-        
-        Rayfield:Notify({
-            Title = "Pet Count Debug",
-            Content = debugInfo,
-            Duration = 8,
-            Image = nil,
-        })
     end,
 })
 
