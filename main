@@ -15,7 +15,7 @@ local REBIRTH_INTERVAL = 3600
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by The Clansmen",
+    LoadingSubtitle = "by Adolf Hitler",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -32,9 +32,10 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Main", nil)
 local MainSection = MainTab:CreateSection("Main Functions")
 
-MainTab:AddToggle("AutoBlowBubbles", {
-    Text = "Auto Blow Bubbles",
-    Default = false,
+MainTab:CreateToggle({
+    Name = "Auto Blow Bubbles",
+    CurrentValue = false,
+    Flag = "AutoBlowBubbles",
     
     Callback = function(Value)
         getgenv().Functions.AutoBlowBubbles = Value
@@ -116,9 +117,10 @@ local function useRebirthMachine()
     end
 end
 
-RebirthTab:AddToggle("AutoRebirthMachine", {
-    Text = "Auto Rebirth Machine",
-    Default = false,
+RebirthTab:CreateToggle({
+    Name = "Auto Rebirth Machine",
+    CurrentValue = false,
+    Flag = "AutoRebirthMachine",
     
     Callback = function(Value)
         getgenv().Functions.AutoRebirthMachine = Value
@@ -141,12 +143,12 @@ RebirthTab:AddToggle("AutoRebirthMachine", {
     end
 })
 
-local IntervalSlider = RebirthTab:AddSlider("MachineInterval", {
-    Text = "Machine Interval (minutes)",
-    Default = 60,
-    Min = 1,
-    Max = 120,
-    Rounding = 1,
+local IntervalSlider = RebirthTab:CreateSlider({
+    Name = "Machine Interval (minutes)",
+    Range = {1, 120},
+    Increment = 1,
+    CurrentValue = 60,
+    Flag = "MachineInterval",
     
     Callback = function(Value)
         REBIRTH_INTERVAL = Value * 60
