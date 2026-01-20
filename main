@@ -1,7 +1,7 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 
@@ -9,160 +9,30 @@ local REBIRTH_INTERVAL = 3600
 local isAutoRebirthEnabled = false
 local rebirthThread = nil
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoRebirthGUI"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = CoreGui
+local Window = Rayfield:CreateWindow({
+    Name = "Auto Rebirth Machine",
+    LoadingTitle = "Rebirth Machine",
+    LoadingSubtitle = "by Zacharificy",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "AutoRebirthConfig",
+        FileName = "config"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = true
+    },
+    KeySystem = false
+})
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -110)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-mainFrame.BorderSizePixel = 0
-mainFrame.ClipsDescendants = true
-mainFrame.Parent = screenGui
+local MainTab = Window:CreateTab("Main", nil)
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
-mainCorner.Parent = mainFrame
+local StatusSection = MainTab:CreateSection("Status")
 
-local topBar = Instance.new("Frame")
-topBar.Size = UDim2.new(1, 0, 0, 50)
-topBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-topBar.BorderSizePixel = 0
-topBar.Parent = mainFrame
+local statusLabel = MainTab:CreateLabel("Status: Disabled")
 
-local topBarCorner = Instance.new("UICorner")
-topBarCorner.CornerRadius = UDim.new(0, 12)
-topBarCorner.Parent = topBar
-
-local topBarFix = Instance.new("Frame")
-topBarFix.Size = UDim2.new(1, 0, 0, 25)
-topBarFix.Position = UDim2.new(0, 0, 1, -25)
-topBarFix.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-topBarFix.BorderSizePixel = 0
-topBarFix.Parent = topBar
-
-local accentLine = Instance.new("Frame")
-accentLine.Size = UDim2.new(1, 0, 0, 2)
-accentLine.Position = UDim2.new(0, 0, 1, 0)
-accentLine.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-accentLine.BorderSizePixel = 0
-accentLine.Parent = topBar
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -60, 1, 0)
-title.Position = UDim2.new(0, 15, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "Auto Rebirth"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 18
-title.Font = Enum.Font.GothamBold
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = topBar
-
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 40, 0, 40)
-closeButton.Position = UDim2.new(1, -45, 0, 5)
-closeButton.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 16
-closeButton.Font = Enum.Font.GothamBold
-closeButton.Parent = topBar
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = closeButton
-
-local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -30, 1, -80)
-contentFrame.Position = UDim2.new(0, 15, 0, 65)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = mainFrame
-
-local statusContainer = Instance.new("Frame")
-statusContainer.Size = UDim2.new(1, 0, 0, 60)
-statusContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-statusContainer.BorderSizePixel = 0
-statusContainer.Parent = contentFrame
-
-local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 8)
-statusCorner.Parent = statusContainer
-
-local statusTitle = Instance.new("TextLabel")
-statusTitle.Size = UDim2.new(1, -20, 0, 20)
-statusTitle.Position = UDim2.new(0, 10, 0, 8)
-statusTitle.BackgroundTransparency = 1
-statusTitle.Text = "STATUS"
-statusTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
-statusTitle.TextSize = 12
-statusTitle.Font = Enum.Font.GothamBold
-statusTitle.TextXAlignment = Enum.TextXAlignment.Left
-statusTitle.Parent = statusContainer
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -20, 0, 25)
-statusLabel.Position = UDim2.new(0, 10, 0, 28)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Disabled"
-statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-statusLabel.TextSize = 16
-statusLabel.Font = Enum.Font.GothamBold
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = statusContainer
-
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(1, 0, 0, 50)
-toggleButton.Position = UDim2.new(0, 0, 1, -50)
-toggleButton.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-toggleButton.Text = "START AUTO REBIRTH"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.TextSize = 15
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.Parent = contentFrame
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 8)
-toggleCorner.Parent = toggleButton
-
-local dragging, dragInput, dragStart, startPos
-
-topBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-    end
-end)
-
-topBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-topBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-closeButton.MouseButton1Click:Connect(function()
-    local tween = TweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0)})
-    tween:Play()
-    tween.Completed:Wait()
-    screenGui:Destroy()
-end)
+local RebirthSection = MainTab:CreateSection("Rebirth Machine Settings")
 
 local function getValidSecretPets()
     local validPets = {}
@@ -200,8 +70,7 @@ local function useRebirthMachine()
     local validPets = getValidSecretPets()
     
     if #validPets < 5 then
-        statusLabel.Text = "Not enough pets: " .. #validPets .. "/5"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 170, 50)
+        statusLabel:Set("Status: Not enough pets (" .. #validPets .. "/5)")
         return false
     end
     
@@ -220,12 +89,10 @@ local function useRebirthMachine()
     end)
     
     if success then
-        statusLabel.Text = "Rebirth successful!"
-        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+        statusLabel:Set("Status: Machine used successfully!")
         return true
     else
-        statusLabel.Text = "Rebirth failed"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        statusLabel:Set("Status: Machine failed")
         return false
     end
 end
@@ -240,8 +107,7 @@ local function startAutoRebirth()
                     if not isAutoRebirthEnabled then break end
                     local minutes = math.floor(i / 60)
                     local seconds = i % 60
-                    statusLabel.Text = string.format("Next: %02d:%02d", minutes, seconds)
-                    statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+                    statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
                     task.wait(1)
                 end
             end
@@ -256,24 +122,97 @@ local function stopAutoRebirth()
     end
 end
 
-toggleButton.MouseButton1Click:Connect(function()
-    isAutoRebirthEnabled = not isAutoRebirthEnabled
-    
-    if isAutoRebirthEnabled then
-        toggleButton.Text = "STOP AUTO REBIRTH"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 80)
-        statusLabel.Text = "Running..."
-        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
-        startAutoRebirth()
-    else
-        toggleButton.Text = "START AUTO REBIRTH"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-        statusLabel.Text = "Disabled"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        stopAutoRebirth()
-    end
-end)
+local AutoRebirthToggle = MainTab:CreateToggle({
+    Name = "Enable Auto Machine",
+    CurrentValue = false,
+    Flag = "AutoRebirthToggle",
+    Callback = function(Value)
+        isAutoRebirthEnabled = Value
+        
+        if Value then
+            statusLabel:Set("Status: Enabled")
+            Rayfield:Notify({
+                Title = "Rebirth Machine",
+                Content = "Auto machine has been enabled",
+                Duration = 3,
+                Image = nil,
+            })
+            startAutoRebirth()
+        else
+            statusLabel:Set("Status: Disabled")
+            Rayfield:Notify({
+                Title = "Rebirth Machine",
+                Content = "Auto machine has been disabled",
+                Duration = 3,
+                Image = nil,
+            })
+            stopAutoRebirth()
+        end
+    end,
+})
 
-local openTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 400, 0, 220)})
-mainFrame.Size = UDim2.new(0, 0, 0, 0)
-openTween:Play()
+local IntervalSlider = MainTab:CreateSlider({
+    Name = "Machine Interval (minutes)",
+    Range = {1, 120},
+    Increment = 1,
+    Suffix = "min",
+    CurrentValue = 60,
+    Flag = "IntervalSlider",
+    Callback = function(Value)
+        REBIRTH_INTERVAL = Value * 60
+        Rayfield:Notify({
+            Title = "Interval Updated",
+            Content = "Machine interval set to " .. Value .. " minutes",
+            Duration = 2,
+            Image = nil,
+        })
+    end,
+})
+
+local InfoSection = MainTab:CreateSection("Information")
+
+MainTab:CreateParagraph({
+    Title = "How to Use",
+    Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory."
+})
+
+local UtilityTab = Window:CreateTab("Utility", nil)
+
+local UtilitySection = UtilityTab:CreateSection("Script Control")
+
+UtilityTab:CreateButton({
+    Name = "Check Pet Count",
+    Callback = function()
+        local validPets = getValidSecretPets()
+        Rayfield:Notify({
+            Title = "Pet Count",
+            Content = "Valid Giant Bongo Kitty: " .. #validPets,
+            Duration = 4,
+            Image = nil,
+        })
+    end,
+})
+
+UtilityTab:CreateButton({
+    Name = "Use Machine Now",
+    Callback = function()
+        local success = useRebirthMachine()
+        if success then
+            Rayfield:Notify({
+                Title = "Machine",
+                Content = "Machine used successfully!",
+                Duration = 3,
+                Image = nil,
+            })
+        else
+            Rayfield:Notify({
+                Title = "Machine Failed",
+                Content = "Could not use machine",
+                Duration = 3,
+                Image = nil,
+            })
+        end
+    end,
+})
+
+Rayfield:LoadConfiguration()
