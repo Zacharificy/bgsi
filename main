@@ -1,9 +1,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
 local REBIRTH_INTERVAL = 3600
 local isAutoRebirthEnabled = false
@@ -12,48 +12,117 @@ local rebirthThread = nil
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AutoRebirthGUI"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = CoreGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 150)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
-mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.Size = UDim2.new(0, 400, 0, 220)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -110)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 10)
-uiCorner.Parent = mainFrame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 50)
+topBar.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+
+local topBarCorner = Instance.new("UICorner")
+topBarCorner.CornerRadius = UDim.new(0, 12)
+topBarCorner.Parent = topBar
+
+local topBarFix = Instance.new("Frame")
+topBarFix.Size = UDim2.new(1, 0, 0, 25)
+topBarFix.Position = UDim2.new(0, 0, 1, -25)
+topBarFix.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+topBarFix.BorderSizePixel = 0
+topBarFix.Parent = topBar
+
+local accentLine = Instance.new("Frame")
+accentLine.Size = UDim2.new(1, 0, 0, 2)
+accentLine.Position = UDim2.new(0, 0, 1, 0)
+accentLine.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+accentLine.BorderSizePixel = 0
+accentLine.Parent = topBar
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
+title.Size = UDim2.new(1, -60, 1, 0)
+title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Auto Rebirth Machine"
+title.Text = "Auto Rebirth"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextSize = 18
 title.Font = Enum.Font.GothamBold
-title.Parent = mainFrame
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = topBar
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -45, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 16
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = topBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeButton
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, -30, 1, -80)
+contentFrame.Position = UDim2.new(0, 15, 0, 65)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+local statusContainer = Instance.new("Frame")
+statusContainer.Size = UDim2.new(1, 0, 0, 60)
+statusContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+statusContainer.BorderSizePixel = 0
+statusContainer.Parent = contentFrame
+
+local statusCorner = Instance.new("UICorner")
+statusCorner.CornerRadius = UDim.new(0, 8)
+statusCorner.Parent = statusContainer
+
+local statusTitle = Instance.new("TextLabel")
+statusTitle.Size = UDim2.new(1, -20, 0, 20)
+statusTitle.Position = UDim2.new(0, 10, 0, 8)
+statusTitle.BackgroundTransparency = 1
+statusTitle.Text = "STATUS"
+statusTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
+statusTitle.TextSize = 12
+statusTitle.Font = Enum.Font.GothamBold
+statusTitle.TextXAlignment = Enum.TextXAlignment.Left
+statusTitle.Parent = statusContainer
 
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -20, 0, 30)
-statusLabel.Position = UDim2.new(0, 10, 0, 50)
+statusLabel.Size = UDim2.new(1, -20, 0, 25)
+statusLabel.Position = UDim2.new(0, 10, 0, 28)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Status: Disabled"
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.TextSize = 14
-statusLabel.Font = Enum.Font.Gotham
+statusLabel.Text = "Disabled"
+statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+statusLabel.TextSize = 16
+statusLabel.Font = Enum.Font.GothamBold
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = mainFrame
+statusLabel.Parent = statusContainer
 
 local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 120, 0, 40)
-toggleButton.Position = UDim2.new(0.5, -60, 1, -50)
-toggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-toggleButton.Text = "Enable"
+toggleButton.Size = UDim2.new(1, 0, 0, 50)
+toggleButton.Position = UDim2.new(0, 0, 1, -50)
+toggleButton.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+toggleButton.Text = "START AUTO REBIRTH"
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.TextSize = 16
+toggleButton.TextSize = 15
 toggleButton.Font = Enum.Font.GothamBold
-toggleButton.Parent = mainFrame
+toggleButton.Parent = contentFrame
 
 local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
@@ -61,7 +130,7 @@ toggleCorner.Parent = toggleButton
 
 local dragging, dragInput, dragStart, startPos
 
-mainFrame.InputBegan:Connect(function(input)
+topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
@@ -69,13 +138,13 @@ mainFrame.InputBegan:Connect(function(input)
     end
 end)
 
-mainFrame.InputChanged:Connect(function(input)
+topBar.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         dragInput = input
     end
 end)
 
-mainFrame.InputEnded:Connect(function(input)
+topBar.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
@@ -88,26 +157,38 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
     end
 end)
 
+closeButton.MouseButton1Click:Connect(function()
+    local tween = TweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 0, 0, 0)})
+    tween:Play()
+    tween.Completed:Wait()
+    screenGui:Destroy()
+end)
+
 local function getValidSecretPets()
     local validPets = {}
     
-    local petsFolder = player:FindFirstChild("PetsFolder") or player:FindFirstChild("Pets")
-    if not petsFolder then
-        warn("Pets folder not found")
+    local args = {"GetExisting", "Giant Bongo Kitty"}
+    local success, result = pcall(function()
+        return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+    end)
+    
+    if not success or not result then
+        warn("Failed to get pets inventory")
         return validPets
     end
     
-    for _, pet in pairs(petsFolder:GetChildren()) do
-        local isSecret = pet:FindFirstChild("IsSecret") or pet:FindFirstChild("Secret")
-        local isEquipped = pet:FindFirstChild("IsEquipped") or pet:FindFirstChild("Equipped")
-        local isShiny = pet:FindFirstChild("IsShiny") or pet:FindFirstChild("Shiny")
-        local isMythic = pet:FindFirstChild("IsMythic") or pet:FindFirstChild("Mythic")
-        
-        if isSecret and isSecret.Value == true then
-            if (not isEquipped or isEquipped.Value == false) and
-               (not isShiny or isShiny.Value == false) and
-               (not isMythic or isMythic.Value == false) then
-                table.insert(validPets, pet:FindFirstChild("UID") and pet.UID.Value or pet.Name)
+    if type(result) == "table" then
+        for _, pet in pairs(result) do
+            if type(pet) == "table" then
+                local petName = pet.name or pet.Name or pet.id or ""
+                local isEquipped = pet.equipped or pet.Equipped or false
+                local isShiny = pet.shiny or pet.Shiny or false
+                local isMythic = pet.mythic or pet.Mythic or false
+                local petId = pet.uid or pet.UID or pet.id or pet.ID
+                
+                if petName == "Giant Bongo Kitty" and not isEquipped and not isShiny and not isMythic and petId then
+                    table.insert(validPets, petId)
+                end
             end
         end
     end
@@ -119,8 +200,8 @@ local function useRebirthMachine()
     local validPets = getValidSecretPets()
     
     if #validPets < 5 then
-        statusLabel.Text = "Status: Not enough valid secret pets (" .. #validPets .. "/5)"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+        statusLabel.Text = "Not enough pets: " .. #validPets .. "/5"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 170, 50)
         return false
     end
     
@@ -139,12 +220,12 @@ local function useRebirthMachine()
     end)
     
     if success then
-        statusLabel.Text = "Status: Rebirth successful!"
-        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+        statusLabel.Text = "Rebirth successful!"
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
         return true
     else
-        statusLabel.Text = "Status: Rebirth failed"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        statusLabel.Text = "Rebirth failed"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         return false
     end
 end
@@ -157,7 +238,9 @@ local function startAutoRebirth()
             if isAutoRebirthEnabled then
                 for i = REBIRTH_INTERVAL, 0, -1 do
                     if not isAutoRebirthEnabled then break end
-                    statusLabel.Text = "Status: Next rebirth in " .. i .. "s"
+                    local minutes = math.floor(i / 60)
+                    local seconds = i % 60
+                    statusLabel.Text = string.format("Next: %02d:%02d", minutes, seconds)
                     statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
                     task.wait(1)
                 end
@@ -177,16 +260,20 @@ toggleButton.MouseButton1Click:Connect(function()
     isAutoRebirthEnabled = not isAutoRebirthEnabled
     
     if isAutoRebirthEnabled then
-        toggleButton.Text = "Disable"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 220, 50)
-        statusLabel.Text = "Status: Enabled"
-        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+        toggleButton.Text = "STOP AUTO REBIRTH"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 80)
+        statusLabel.Text = "Running..."
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
         startAutoRebirth()
     else
-        toggleButton.Text = "Enable"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-        statusLabel.Text = "Status: Disabled"
-        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        toggleButton.Text = "START AUTO REBIRTH"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+        statusLabel.Text = "Disabled"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         stopAutoRebirth()
     end
 end)
+
+local openTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(0, 400, 0, 220)})
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+openTween:Play()
