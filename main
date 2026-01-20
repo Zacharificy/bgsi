@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 
 getgenv().Functions = {
     AutoRebirthMachine = false,
-    AutoBlowBubbles = false
+    AutoBlowBubbles = true
 }
 
 local REBIRTH_INTERVAL = 3600
