@@ -12,7 +12,7 @@ local rebirthThread = nil
 local Window = Rayfield:CreateWindow({
     Name = "Auto Rebirth Machine",
     LoadingTitle = "Rebirth Machine",
-    LoadingSubtitle = "by NIGGER",
+    LoadingSubtitle = "by Zacharificy",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "AutoRebirthConfig",
@@ -42,23 +42,20 @@ local function getValidSecretPets()
         return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
     end)
     
-    if not success or not result then
-        warn("Failed to get pets inventory")
+    if not success then
+        warn("Failed to get pets inventory:", result)
+        return validPets
+    end
+    
+    if not result then
+        warn("No result from GetExisting")
         return validPets
     end
     
     if type(result) == "table" then
-        for _, pet in pairs(result) do
-            if type(pet) == "table" then
-                local petName = pet.name or pet.Name or pet.id or ""
-                local isEquipped = pet.equipped or pet.Equipped or false
-                local isShiny = pet.shiny or pet.Shiny or false
-                local isMythic = pet.mythic or pet.Mythic or false
-                local petId = pet.uid or pet.UID or pet.id or pet.ID
-                
-                if petName == "Giant Bongo Kitty" and not isEquipped and not isShiny and not isMythic and petId then
-                    table.insert(validPets, petId)
-                end
+        for _, petData in pairs(result) do
+            if type(petData) == "string" then
+                table.insert(validPets, petData)
             end
         end
     end
@@ -184,10 +181,22 @@ UtilityTab:CreateButton({
     Name = "Check Pet Count",
     Callback = function()
         local validPets = getValidSecretPets()
+        local args = {"GetExisting", "Giant Bongo Kitty"}
+        local success, result = pcall(function()
+            return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+        end)
+        
+        local debugInfo = "Valid: " .. #validPets .. "\n"
+        if success and result then
+            debugInfo = debugInfo .. "Total returned: " .. (type(result) == "table" and #result or "not table")
+        else
+            debugInfo = debugInfo .. "Failed to get data"
+        end
+        
         Rayfield:Notify({
             Title = "Pet Count",
-            Content = "Valid Giant Bongo Kitty: " .. #validPets,
-            Duration = 4,
+            Content = debugInfo,
+            Duration = 5,
             Image = nil,
         })
     end,
