@@ -1,0 +1,192 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local REBIRTH_INTERVAL = 3600
+local isAutoRebirthEnabled = false
+local rebirthThread = nil
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoRebirthGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 150)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 10)
+uiCorner.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "Auto Rebirth Machine"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 18
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 30)
+statusLabel.Position = UDim2.new(0, 10, 0, 50)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Status: Disabled"
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.TextSize = 14
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = mainFrame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 120, 0, 40)
+toggleButton.Position = UDim2.new(0.5, -60, 1, -50)
+toggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+toggleButton.Text = "Enable"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = 16
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = mainFrame
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleButton
+
+local dragging, dragInput, dragStart, startPos
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+mainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local function getValidSecretPets()
+    local validPets = {}
+    
+    local petsFolder = player:FindFirstChild("PetsFolder") or player:FindFirstChild("Pets")
+    if not petsFolder then
+        warn("Pets folder not found")
+        return validPets
+    end
+    
+    for _, pet in pairs(petsFolder:GetChildren()) do
+        local isSecret = pet:FindFirstChild("IsSecret") or pet:FindFirstChild("Secret")
+        local isEquipped = pet:FindFirstChild("IsEquipped") or pet:FindFirstChild("Equipped")
+        local isShiny = pet:FindFirstChild("IsShiny") or pet:FindFirstChild("Shiny")
+        local isMythic = pet:FindFirstChild("IsMythic") or pet:FindFirstChild("Mythic")
+        
+        if isSecret and isSecret.Value == true then
+            if (not isEquipped or isEquipped.Value == false) and
+               (not isShiny or isShiny.Value == false) and
+               (not isMythic or isMythic.Value == false) then
+                table.insert(validPets, pet:FindFirstChild("UID") and pet.UID.Value or pet.Name)
+            end
+        end
+    end
+    
+    return validPets
+end
+
+local function useRebirthMachine()
+    local validPets = getValidSecretPets()
+    
+    if #validPets < 5 then
+        statusLabel.Text = "Status: Not enough valid secret pets (" .. #validPets .. "/5)"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+        return false
+    end
+    
+    local selectedPets = {}
+    for i = 1, 5 do
+        table.insert(selectedPets, validPets[i])
+    end
+    
+    local args = {
+        "UseRebirthMachine",
+        selectedPets
+    }
+    
+    local success, result = pcall(function()
+        return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+    end)
+    
+    if success then
+        statusLabel.Text = "Status: Rebirth successful!"
+        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+        return true
+    else
+        statusLabel.Text = "Status: Rebirth failed"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        return false
+    end
+end
+
+local function startAutoRebirth()
+    rebirthThread = task.spawn(function()
+        while isAutoRebirthEnabled do
+            useRebirthMachine()
+            
+            if isAutoRebirthEnabled then
+                for i = REBIRTH_INTERVAL, 0, -1 do
+                    if not isAutoRebirthEnabled then break end
+                    statusLabel.Text = "Status: Next rebirth in " .. i .. "s"
+                    statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+                    task.wait(1)
+                end
+            end
+        end
+    end)
+end
+
+local function stopAutoRebirth()
+    if rebirthThread then
+        task.cancel(rebirthThread)
+        rebirthThread = nil
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    isAutoRebirthEnabled = not isAutoRebirthEnabled
+    
+    if isAutoRebirthEnabled then
+        toggleButton.Text = "Disable"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 220, 50)
+        statusLabel.Text = "Status: Enabled"
+        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+        startAutoRebirth()
+    else
+        toggleButton.Text = "Enable"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+        statusLabel.Text = "Status: Disabled"
+        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        stopAutoRebirth()
+    end
+end)
