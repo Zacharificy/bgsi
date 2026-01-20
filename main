@@ -5,17 +5,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 
+getgenv().Functions = {
+    AutoRebirthMachine = false,
+    AutoBlowBubbles = false
+}
+
 local REBIRTH_INTERVAL = 3600
-local isAutoRebirthEnabled = false
-local rebirthThread = nil
 
 local Window = Rayfield:CreateWindow({
-    Name = "Auto Rebirth Machine",
-    LoadingTitle = "Rebirth Machine",
-    LoadingSubtitle = "by Zacharificy",
+    Name = "Bubble Gum Simulator",
+    LoadingTitle = "BGS Auto Farm",
+    LoadingSubtitle = "by The Clansmen",
     ConfigurationSaving = {
         Enabled = true,
-        FolderName = "AutoRebirthConfig",
+        FolderName = "BGSAutoFarm",
         FileName = "config"
     },
     Discord = {
@@ -27,12 +30,27 @@ local Window = Rayfield:CreateWindow({
 })
 
 local MainTab = Window:CreateTab("Main", nil)
+local MainSection = MainTab:CreateSection("Main Functions")
 
-local StatusSection = MainTab:CreateSection("Status")
+MainTab:AddToggle("AutoBlowBubbles", {
+    Text = "Auto Blow Bubbles",
+    Default = false,
+    
+    Callback = function(Value)
+        getgenv().Functions.AutoBlowBubbles = Value
+        task.spawn(function()
+            while Functions.AutoBlowBubbles do
+                task.wait()
+                ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("Event"):FireServer("BlowBubble")
+            end
+        end)
+    end
+})
 
-local statusLabel = MainTab:CreateLabel("Status: Disabled")
-
-local RebirthSection = MainTab:CreateSection("Rebirth Machine Settings")
+local RebirthTab = Window:CreateTab("Rebirth", nil)
+local StatusSection = RebirthTab:CreateSection("Status")
+local statusLabel = RebirthTab:CreateLabel("Status: Disabled")
+local RebirthSection = RebirthTab:CreateSection("Rebirth Machine Settings")
 
 local function getValidSecretPets()
     local validPets = {}
@@ -53,11 +71,15 @@ local function getValidSecretPets()
     end
     
     if type(result) == "table" then
-        for _, petData in pairs(result) do
+        for key, petData in pairs(result) do
             if type(petData) == "string" then
                 table.insert(validPets, petData)
+            elseif type(key) == "string" then
+                table.insert(validPets, key)
             end
         end
+    elseif type(result) == "string" then
+        table.insert(validPets, result)
     end
     
     return validPets
@@ -89,72 +111,43 @@ local function useRebirthMachine()
         statusLabel:Set("Status: Machine used successfully!")
         return true
     else
-        statusLabel:Set("Status: Machine failed")
+        statusLabel:Set("Status: Machine failed - " .. tostring(result))
         return false
     end
 end
 
-local function startAutoRebirth()
-    rebirthThread = task.spawn(function()
-        while isAutoRebirthEnabled do
-            useRebirthMachine()
-            
-            if isAutoRebirthEnabled then
-                for i = REBIRTH_INTERVAL, 0, -1 do
-                    if not isAutoRebirthEnabled then break end
-                    local minutes = math.floor(i / 60)
-                    local seconds = i % 60
-                    statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
-                    task.wait(1)
+RebirthTab:AddToggle("AutoRebirthMachine", {
+    Text = "Auto Rebirth Machine",
+    Default = false,
+    
+    Callback = function(Value)
+        getgenv().Functions.AutoRebirthMachine = Value
+        task.spawn(function()
+            while Functions.AutoRebirthMachine do
+                useRebirthMachine()
+                
+                if Functions.AutoRebirthMachine then
+                    for i = REBIRTH_INTERVAL, 0, -1 do
+                        if not Functions.AutoRebirthMachine then break end
+                        local minutes = math.floor(i / 60)
+                        local seconds = i % 60
+                        statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
+                        task.wait(1)
+                    end
                 end
             end
-        end
-    end)
-end
-
-local function stopAutoRebirth()
-    if rebirthThread then
-        task.cancel(rebirthThread)
-        rebirthThread = nil
-    end
-end
-
-local AutoRebirthToggle = MainTab:CreateToggle({
-    Name = "Enable Auto Machine",
-    CurrentValue = false,
-    Flag = "AutoRebirthToggle",
-    Callback = function(Value)
-        isAutoRebirthEnabled = Value
-        
-        if Value then
-            statusLabel:Set("Status: Enabled")
-            Rayfield:Notify({
-                Title = "Rebirth Machine",
-                Content = "Auto machine has been enabled",
-                Duration = 3,
-                Image = nil,
-            })
-            startAutoRebirth()
-        else
             statusLabel:Set("Status: Disabled")
-            Rayfield:Notify({
-                Title = "Rebirth Machine",
-                Content = "Auto machine has been disabled",
-                Duration = 3,
-                Image = nil,
-            })
-            stopAutoRebirth()
-        end
-    end,
+        end)
+    end
 })
 
-local IntervalSlider = MainTab:CreateSlider({
-    Name = "Machine Interval (minutes)",
-    Range = {1, 120},
-    Increment = 1,
-    Suffix = "min",
-    CurrentValue = 60,
-    Flag = "IntervalSlider",
+local IntervalSlider = RebirthTab:AddSlider("MachineInterval", {
+    Text = "Machine Interval (minutes)",
+    Default = 60,
+    Min = 1,
+    Max = 120,
+    Rounding = 1,
+    
     Callback = function(Value)
         REBIRTH_INTERVAL = Value * 60
         Rayfield:Notify({
@@ -163,18 +156,17 @@ local IntervalSlider = MainTab:CreateSlider({
             Duration = 2,
             Image = nil,
         })
-    end,
+    end
 })
 
-local InfoSection = MainTab:CreateSection("Information")
+local InfoSection = RebirthTab:CreateSection("Information")
 
-MainTab:CreateParagraph({
+RebirthTab:CreateParagraph({
     Title = "How to Use",
     Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory."
 })
 
 local UtilityTab = Window:CreateTab("Utility", nil)
-
 local UtilitySection = UtilityTab:CreateSection("Script Control")
 
 UtilityTab:CreateButton({
@@ -186,17 +178,27 @@ UtilityTab:CreateButton({
             return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
         end)
         
-        local debugInfo = "Valid: " .. #validPets .. "\n"
+        local debugInfo = "Valid pets found: " .. #validPets .. "\n"
         if success and result then
-            debugInfo = debugInfo .. "Total returned: " .. (type(result) == "table" and #result or "not table")
+            if type(result) == "table" then
+                debugInfo = debugInfo .. "Table size: " .. tostring(#result) .. "\n"
+                debugInfo = debugInfo .. "Table pairs count: "
+                local count = 0
+                for k,v in pairs(result) do
+                    count = count + 1
+                end
+                debugInfo = debugInfo .. count
+            else
+                debugInfo = debugInfo .. "Result type: " .. type(result)
+            end
         else
-            debugInfo = debugInfo .. "Failed to get data"
+            debugInfo = debugInfo .. "Failed to get data: " .. tostring(result)
         end
         
         Rayfield:Notify({
-            Title = "Pet Count",
+            Title = "Pet Count Debug",
             Content = debugInfo,
-            Duration = 5,
+            Duration = 8,
             Image = nil,
         })
     end,
