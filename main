@@ -17,7 +17,7 @@ local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by Script Hub",
+    LoadingSubtitle = "by NIGGERZ",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -190,6 +190,28 @@ local IntervalSlider = RebirthTab:CreateSlider({
 
 local InfoSection = RebirthTab:CreateSection("Information")
 
+RebirthTab:CreateButton({
+    Name = "Use Machine Now",
+    Callback = function()
+        local success = useRebirthMachine()
+        if success then
+            Rayfield:Notify({
+                Title = "Success",
+                Content = "Rebirth machine used!",
+                Duration = 3,
+                Image = nil,
+            })
+        else
+            Rayfield:Notify({
+                Title = "Failed",
+                Content = "Could not use machine - check pet count",
+                Duration = 3,
+                Image = nil,
+            })
+        end
+    end,
+})
+
 RebirthTab:CreateParagraph({
     Title = "How to Use",
     Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory."
@@ -251,28 +273,6 @@ UtilityTab:CreateButton({
             Rayfield:Notify({
                 Title = "No Pets",
                 Content = "Pets table not found in game data",
-                Duration = 3,
-                Image = nil,
-            })
-        end
-    end,
-})
-
-UtilityTab:CreateButton({
-    Name = "Use Machine Now",
-    Callback = function()
-        local success = useRebirthMachine()
-        if success then
-            Rayfield:Notify({
-                Title = "Machine",
-                Content = "Machine used successfully!",
-                Duration = 3,
-                Image = nil,
-            })
-        else
-            Rayfield:Notify({
-                Title = "Machine Failed",
-                Content = "Could not use machine",
                 Duration = 3,
                 Image = nil,
             })
