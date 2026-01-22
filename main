@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by GooGooGaaGaa",
+    LoadingSubtitle = "by Script Hub",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -97,16 +97,12 @@ local originalPosition = nil
 local function findRebirthMachine()
     local workspace = game:GetService("Workspace")
     
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj.Name:lower():find("rebirth") and obj.Name:lower():find("machine") then
-            return obj
-        end
-    end
+    local success, rebirthMachine = pcall(function()
+        return workspace:WaitForChild("RebirthMachine"):WaitForChild("Activation"):WaitForChild("Ring")
+    end)
     
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj.Name:lower():find("rebirth") then
-            return obj
-        end
+    if success and rebirthMachine then
+        return rebirthMachine
     end
     
     return nil
