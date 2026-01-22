@@ -11,11 +11,13 @@ getgenv().Functions = {
 }
 
 local REBIRTH_INTERVAL = 3600
+local Remote = require(ReplicatedStorage.Shared.Framework.Network.Remote)
+local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
 
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by NIGGAZINPARIS",
+    LoadingSubtitle = "by Script Hub",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -42,7 +44,23 @@ MainTab:CreateToggle({
         task.spawn(function()
             while Functions.AutoBlowBubbles do
                 task.wait()
-                ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("Event"):FireServer("BlowBubble")
+                Remote:FireServer("BlowBubble")
+            end
+        end)
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Auto Sell Bubbles",
+    CurrentValue = false,
+    Flag = "AutoSellBubbles",
+    
+    Callback = function(Value)
+        getgenv().Functions.AutoSellBubbles = Value
+        task.spawn(function()
+            while Functions.AutoSellBubbles do
+                task.wait()
+                Remote:FireServer("SellBubble")
             end
         end)
     end
@@ -56,31 +74,23 @@ local RebirthSection = RebirthTab:CreateSection("Rebirth Machine Settings")
 local function getValidSecretPets()
     local validPets = {}
     
-    local args = {"GetExisting", "Giant Bongo Kitty"}
-    local success, result = pcall(function()
-        return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
-    end)
-    
-    if not success then
-        warn("Failed to get pets inventory:", result)
+    local data = LocalData:Get()
+    if not data or not data.Pets then
+        warn("No pet data found")
         return validPets
     end
     
-    if not result then
-        warn("No result from GetExisting")
-        return validPets
-    end
-    
-    if type(result) == "table" then
-        for key, petData in pairs(result) do
-            if type(petData) == "string" then
-                table.insert(validPets, petData)
-            elseif type(key) == "string" then
-                table.insert(validPets, key)
+    for petGUID, petData in pairs(data.Pets) do
+        if type(petData) == "table" then
+            local petName = petData.Name or ""
+            local isEquipped = petData.Equipped or false
+            local isShiny = petData.Shiny or false
+            local isMythic = petData.Mythic or false
+            
+            if petName == "Giant Bongo Kitty" and not isEquipped and not isShiny and not isMythic then
+                table.insert(validPets, petGUID)
             end
         end
-    elseif type(result) == "string" then
-        table.insert(validPets, result)
     end
     
     return validPets
@@ -107,13 +117,8 @@ local function useRebirthMachine()
     
     statusLabel:Set("Status: Attempting to use machine...")
     
-    local args = {
-        "UseRebirthMachine",
-        selectedPets
-    }
-    
     local success, result = pcall(function()
-        return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+        return Remote:InvokeServer("UseRebirthMachine", selectedPets)
     end)
     
     task.wait(0.5)
@@ -196,45 +201,56 @@ local UtilitySection = UtilityTab:CreateSection("Script Control")
 UtilityTab:CreateButton({
     Name = "Check Pet Count",
     Callback = function()
-        local args = {"GetExisting", "Giant Bongo Kitty"}
-        local success, result = pcall(function()
-            return ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
-        end)
+        local data = LocalData:Get()
         
-        if success and result then
-            print("=== RAW RESULT ===")
-            print("Type:", type(result))
+        if not data then
+            print("No LocalData found")
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Could not access game data",
+                Duration = 3,
+                Image = nil,
+            })
+            return
+        end
+        
+        print("=== PET DEBUG ===")
+        print("Has Pets table:", data.Pets ~= nil)
+        
+        if data.Pets then
+            local count = 0
+            local bongoCats = 0
+            local validBongoCats = 0
             
-            if type(result) == "table" then
-                print("Table length (#):", #result)
-                print("Table pairs:")
-                local count = 0
-                for k, v in pairs(result) do
-                    count = count + 1
-                    print("  Key:", k, "Type:", type(k), "| Value:", v, "Type:", type(v))
+            for guid, pet in pairs(data.Pets) do
+                count = count + 1
+                if type(pet) == "table" and pet.Name == "Giant Bongo Kitty" then
+                    bongoCats = bongoCats + 1
+                    print("Found Bongo Cat:", guid)
+                    print("  Equipped:", pet.Equipped or false)
+                    print("  Shiny:", pet.Shiny or false)
+                    print("  Mythic:", pet.Mythic or false)
+                    
+                    if not pet.Equipped and not pet.Shiny and not pet.Mythic then
+                        validBongoCats = validBongoCats + 1
+                    end
                 end
-                print("Total pairs:", count)
-            else
-                print("Value:", result)
             end
             
-            local validPets = getValidSecretPets()
-            print("Valid pets extracted:", #validPets)
-            for i, pet in ipairs(validPets) do
-                print("  Pet", i, ":", pet)
-            end
+            print("Total pets:", count)
+            print("Total Bongo Cats:", bongoCats)
+            print("Valid Bongo Cats:", validBongoCats)
             
             Rayfield:Notify({
-                Title = "Check Console (F9)",
-                Content = "Pet data printed to console. Found: " .. #validPets,
+                Title = "Pet Count",
+                Content = "Valid: " .. validBongoCats .. "\nTotal Bongo: " .. bongoCats .. "\nAll Pets: " .. count,
                 Duration = 5,
                 Image = nil,
             })
         else
-            print("Failed to get pets:", result)
             Rayfield:Notify({
-                Title = "Error",
-                Content = "Failed to get pet data",
+                Title = "No Pets",
+                Content = "Pets table not found in game data",
                 Duration = 3,
                 Image = nil,
             })
