@@ -11,13 +11,26 @@ getgenv().Functions = {
 }
 
 local REBIRTH_INTERVAL = 3600
-local Remote = require(ReplicatedStorage.Shared.Framework.Network.Remote)
-local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
+
+local Remote, LocalData
+local success1, err1 = pcall(function()
+    Remote = require(ReplicatedStorage.Shared.Framework.Network.Remote)
+end)
+local success2, err2 = pcall(function()
+    LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
+end)
+
+if not success1 then
+    warn("Failed to load Remote:", err1)
+end
+if not success2 then
+    warn("Failed to load LocalData:", err2)
+end
 
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by NIGGERZ",
+    LoadingSubtitle = "by GooGooGaaGaa",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -43,8 +56,12 @@ MainTab:CreateToggle({
         getgenv().Functions.AutoBlowBubbles = Value
         task.spawn(function()
             while Functions.AutoBlowBubbles do
-                task.wait()
-                Remote:FireServer("BlowBubble")
+                pcall(function()
+                    task.wait()
+                    if Remote then
+                        Remote:FireServer("BlowBubble")
+                    end
+                end)
             end
         end)
     end
@@ -59,8 +76,12 @@ MainTab:CreateToggle({
         getgenv().Functions.AutoSellBubbles = Value
         task.spawn(function()
             while Functions.AutoSellBubbles do
-                task.wait()
-                Remote:FireServer("SellBubble")
+                pcall(function()
+                    task.wait()
+                    if Remote then
+                        Remote:FireServer("SellBubble")
+                    end
+                end)
             end
         end)
     end
@@ -71,11 +92,159 @@ local StatusSection = RebirthTab:CreateSection("Status")
 local statusLabel = RebirthTab:CreateLabel("Status: Disabled")
 local RebirthSection = RebirthTab:CreateSection("Rebirth Machine Settings")
 
+local originalPosition = nil
+
+local function findRebirthMachine()
+    local workspace = game:GetService("Workspace")
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name:lower():find("rebirth") and obj.Name:lower():find("machine") then
+            return obj
+        end
+    end
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name:lower():find("rebirth") then
+            return obj
+        end
+    end
+    
+    return nil
+end
+
+local function teleportToRebirthMachine()
+    local character = player.Character
+    if not character then return false end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return false end
+    
+    originalPosition = humanoidRootPart.CFrame
+    
+    local rebirthMachine = findRebirthMachine()
+    if not rebirthMachine then
+        statusLabel:Set("Status: Rebirth machine not found")
+        return false
+    end
+    
+    local targetCFrame
+    if rebirthMachine:IsA("Model") then
+        targetCFrame = rebirthMachine:GetPivot()
+    elseif rebirthMachine:IsA("BasePart") then
+        targetCFrame = rebirthMachine.CFrame
+    else
+        return false
+    end
+    
+    humanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 3, 5)
+    return true
+end
+
+local function teleportBack()
+    if originalPosition then
+        local character = player.Character
+        if character then
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                humanoidRootPart.CFrame = originalPosition
+            end
+        end
+    end
+end
+
+local function useRebirthMachineWithTP(useR)
+    statusLabel:Set("Status: Getting valid pets...")
+    
+    local validPets = getValidSecretPets()
+    
+    if #validPets < 5 then
+        statusLabel:Set("Status: Not enough pets (" .. #validPets .. "/5)")
+        Rayfield:Notify({
+            Title = "Not Enough Pets",
+            Content = "Need 5 Giant Bongo Kitty pets, found: " .. #validPets,
+            Duration = 3,
+            Image = nil,
+        })
+        return false
+    end
+    
+    local selectedPets = {}
+    for i = 1, 5 do
+        table.insert(selectedPets, validPets[i])
+    end
+    
+    statusLabel:Set("Status: Finding rebirth machine...")
+    
+    if not teleportToRebirthMachine() then
+        Rayfield:Notify({
+            Title = "Failed",
+            Content = "Could not find rebirth machine",
+            Duration = 3,
+            Image = nil,
+        })
+        return false
+    end
+    
+    task.wait(0.5)
+    
+    statusLabel:Set("Status: Opening rebirth machine...")
+    
+    local VIM = game:GetService("VirtualInputManager")
+    local key = useR and Enum.KeyCode.R or Enum.KeyCode.E
+    
+    for i = 1, 15 do
+        VIM:SendKeyEvent(true, key, false, game)
+        task.wait(0.1)
+        VIM:SendKeyEvent(false, key, false, game)
+        task.wait(0.15)
+    end
+    
+    task.wait(0.5)
+    
+    statusLabel:Set("Status: Using rebirth machine with pets...")
+    
+    local success, result = pcall(function()
+        return game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer("UseRebirthMachine", selectedPets)
+    end)
+    
+    task.wait(0.5)
+    
+    teleportBack()
+    
+    if success then
+        statusLabel:Set("Status: Rebirth complete!")
+        Rayfield:Notify({
+            Title = "Success",
+            Content = "Rebirth machine used successfully!",
+            Duration = 3,
+            Image = nil,
+        })
+        return true
+    else
+        statusLabel:Set("Status: Rebirth failed - " .. tostring(result))
+        Rayfield:Notify({
+            Title = "Failed",
+            Content = "Rebirth failed: " .. tostring(result),
+            Duration = 4,
+            Image = nil,
+        })
+        return false
+    end
+end
+
 local function getValidSecretPets()
     local validPets = {}
     
-    local data = LocalData:Get()
-    if not data or not data.Pets then
+    if not LocalData then
+        warn("LocalData module not loaded")
+        return validPets
+    end
+    
+    local success, data = pcall(function()
+        return LocalData:Get()
+    end)
+    
+    if not success or not data or not data.Pets then
         warn("No pet data found")
         return validPets
     end
@@ -97,6 +266,11 @@ local function getValidSecretPets()
 end
 
 local function useRebirthMachine()
+    if not Remote then
+        statusLabel:Set("Status: Remote not loaded")
+        return false
+    end
+    
     local validPets = getValidSecretPets()
     
     if #validPets < 5 then
@@ -145,19 +319,45 @@ local function useRebirthMachine()
 end
 
 RebirthTab:CreateToggle({
-    Name = "Auto Rebirth Machine",
+    Name = "Auto Rebirth Machine (R Key)",
     CurrentValue = false,
-    Flag = "AutoRebirthMachine",
+    Flag = "AutoRebirthMachineR",
     
     Callback = function(Value)
         getgenv().Functions.AutoRebirthMachine = Value
         task.spawn(function()
             while Functions.AutoRebirthMachine do
-                useRebirthMachine()
+                useRebirthMachineWithTP(true)
                 
                 if Functions.AutoRebirthMachine then
                     for i = REBIRTH_INTERVAL, 0, -1 do
                         if not Functions.AutoRebirthMachine then break end
+                        local minutes = math.floor(i / 60)
+                        local seconds = i % 60
+                        statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
+                        task.wait(1)
+                    end
+                end
+            end
+            statusLabel:Set("Status: Disabled")
+        end)
+    end
+})
+
+RebirthTab:CreateToggle({
+    Name = "Auto Rebirth Machine (E Key)",
+    CurrentValue = false,
+    Flag = "AutoRebirthMachineE",
+    
+    Callback = function(Value)
+        getgenv().Functions.AutoRebirthMachineE = Value
+        task.spawn(function()
+            while Functions.AutoRebirthMachineE do
+                useRebirthMachineWithTP(false)
+                
+                if Functions.AutoRebirthMachineE then
+                    for i = REBIRTH_INTERVAL, 0, -1 do
+                        if not Functions.AutoRebirthMachineE then break end
                         local minutes = math.floor(i / 60)
                         local seconds = i % 60
                         statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
@@ -191,20 +391,28 @@ local IntervalSlider = RebirthTab:CreateSlider({
 local InfoSection = RebirthTab:CreateSection("Information")
 
 RebirthTab:CreateButton({
-    Name = "Use Machine Now",
+    Name = "Use Machine Now (R Key)",
     Callback = function()
-        local success = useRebirthMachine()
-        if success then
+        local success = useRebirthMachineWithTP(true)
+        if not success then
             Rayfield:Notify({
-                Title = "Success",
-                Content = "Rebirth machine used!",
+                Title = "Failed",
+                Content = "Could not use machine - check if it exists",
                 Duration = 3,
                 Image = nil,
             })
-        else
+        end
+    end,
+})
+
+RebirthTab:CreateButton({
+    Name = "Use Machine Now (E Key)",
+    Callback = function()
+        local success = useRebirthMachineWithTP(false)
+        if not success then
             Rayfield:Notify({
                 Title = "Failed",
-                Content = "Could not use machine - check pet count",
+                Content = "Could not use machine - check if it exists",
                 Duration = 3,
                 Image = nil,
             })
