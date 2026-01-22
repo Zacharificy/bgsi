@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by Script Hub",
+    LoadingSubtitle = "by BOOTYCLAPPA",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -148,6 +148,39 @@ local function teleportBack()
     end
 end
 
+local function getValidSecretPets()
+    local validPets = {}
+    
+    if not LocalData then
+        warn("LocalData module not loaded")
+        return validPets
+    end
+    
+    local success, data = pcall(function()
+        return LocalData:Get()
+    end)
+    
+    if not success or not data or not data.Pets then
+        warn("No pet data found")
+        return validPets
+    end
+    
+    for petGUID, petData in pairs(data.Pets) do
+        if type(petData) == "table" then
+            local petName = petData.Name or ""
+            local isEquipped = petData.Equipped or false
+            local isShiny = petData.Shiny or false
+            local isMythic = petData.Mythic or false
+            
+            if petName == "Giant Bongo Kitty" and not isEquipped and not isShiny and not isMythic then
+                table.insert(validPets, petGUID)
+            end
+        end
+    end
+    
+    return validPets
+end
+
 local function useRebirthMachineWithTP(useR)
     statusLabel:Set("Status: Getting valid pets...")
     
@@ -200,7 +233,7 @@ local function useRebirthMachineWithTP(useR)
     statusLabel:Set("Status: Using rebirth machine with pets...")
     
     local success, result = pcall(function()
-        return game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer("UseRebirthMachine", selectedPets)
+        return Remote:InvokeServer("UseRebirthMachine", selectedPets)
     end)
     
     task.wait(0.5)
@@ -226,39 +259,6 @@ local function useRebirthMachineWithTP(useR)
         })
         return false
     end
-end
-
-local function getValidSecretPets()
-    local validPets = {}
-    
-    if not LocalData then
-        warn("LocalData module not loaded")
-        return validPets
-    end
-    
-    local success, data = pcall(function()
-        return LocalData:Get()
-    end)
-    
-    if not success or not data or not data.Pets then
-        warn("No pet data found")
-        return validPets
-    end
-    
-    for petGUID, petData in pairs(data.Pets) do
-        if type(petData) == "table" then
-            local petName = petData.Name or ""
-            local isEquipped = petData.Equipped or false
-            local isShiny = petData.Shiny or false
-            local isMythic = petData.Mythic or false
-            
-            if petName == "Giant Bongo Kitty" and not isEquipped and not isShiny and not isMythic then
-                table.insert(validPets, petGUID)
-            end
-        end
-    end
-    
-    return validPets
 end
 
 local function useRebirthMachine()
