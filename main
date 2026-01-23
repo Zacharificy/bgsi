@@ -515,91 +515,108 @@ UtilityTab:CreateButton({
 })
 
 UtilityTab:CreateButton({
-    Name = "Debug: Explore Everything",
+    Name = "Debug: Explore GUI Details",
     Callback = function()
-        print("\n=== FULL DEBUG SCAN ===\n")
+        print("\n=== DETAILED GUI EXPLORATION ===\n")
         
         -- Teleport first
         print("Step 1: Teleporting to machine...")
         if not teleportToRebirthMachine() then
-            print("❌ Failed to teleport")
+            print("[FAILED] Could not teleport")
             return
         end
-        print("✅ Teleported successfully")
+        print("[SUCCESS] Teleported successfully")
         
-        task.wait(3) -- Wait longer
+        task.wait(3) -- Wait for UI to load
         
-        -- Check Workspace
-        print("\n=== WORKSPACE CHECK ===")
+        -- Get the BillboardGui we know exists
+        print("\n=== EXPLORING BILLBOARDGUI ===")
         local workspace = game:GetService("Workspace")
-        local rebirth = workspace:FindFirstChild("RebirthMachine")
-        if rebirth then
-            print("Found RebirthMachine in Workspace")
-            print("Descendants:")
-            for _, child in ipairs(rebirth:GetDescendants()) do
-                print("  ", child:GetFullName())
-                if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
-                    print("    ^^ GUI FOUND ^^")
-                    print("    Enabled:", child.Enabled)
-                    print("    All descendants:")
-                    for _, sub in ipairs(child:GetDescendants()) do
-                        print("      ", sub.Name, "-", sub.ClassName)
+        local billboardGui = workspace:FindFirstChild("RebirthMachine")
+        if billboardGui then
+            billboardGui = billboardGui:FindFirstChild("Activation")
+        end
+        if billboardGui then
+            billboardGui = billboardGui:FindFirstChild("Root")
+        end
+        if billboardGui then
+            billboardGui = billboardGui:FindFirstChild("BillboardGui")
+        end
+        
+        if billboardGui then
+            print("[SUCCESS] Found BillboardGui:", billboardGui:GetFullName())
+            print("\n=== ALL DESCENDANTS (DETAILED) ===")
+            
+            local function printTree(obj, indent)
+                indent = indent or ""
+                print(indent .. "|- " .. obj.Name .. " [" .. obj.ClassName .. "]")
+                
+                -- Print important properties
+                if obj:IsA("GuiObject") then
+                    print(indent .. "|  Visible: " .. tostring(obj.Visible))
+                    if obj:IsA("ScrollingFrame") then
+                        print(indent .. "|  >> THIS IS A SCROLLINGFRAME <<")
+                        print(indent .. "|  CanvasSize: " .. tostring(obj.CanvasSize))
+                    end
+                    if obj:IsA("GuiButton") or obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                        print(indent .. "|  >> THIS IS A BUTTON <<")
+                        if obj:IsA("TextButton") then
+                            print(indent .. "|  Text: " .. obj.Text)
+                        end
                     end
                 end
-            end
-        end
-        
-        -- Check PlayerGui
-        print("\n=== PLAYERGUI CHECK ===")
-        local PlayerGui = player:WaitForChild("PlayerGui")
-        print("All GUIs in PlayerGui:")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            print("  ", gui.Name, "| Enabled:", gui.Enabled)
-        end
-        
-        print("\n=== LOOKING FOR SCROLLINGFRAMES ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            for _, child in ipairs(gui:GetDescendants()) do
-                if child:IsA("ScrollingFrame") then
-                    print("FOUND ScrollingFrame in:", gui.Name)
-                    print("  Path:", child:GetFullName())
-                    print("  Visible:", child.Visible)
-                    print("  Parent Visible:", child.Parent.Visible)
+                
+                for _, child in ipairs(obj:GetChildren()) do
+                    printTree(child, indent .. "|  ")
                 end
             end
-        end
-        
-        print("\n=== LOOKING FOR CONVERT BUTTONS ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            for _, child in ipairs(gui:GetDescendants()) do
-                if child:IsA("GuiButton") or child:IsA("TextButton") or child:IsA("ImageButton") then
-                    local name = child.Name:lower()
-                    if name:find("convert") or name:find("rebirth") then
-                        print("FOUND Button:", child.Name)
-                        print("  Path:", child:GetFullName())
-                        print("  Visible:", child.Visible)
-                    end
+            
+            printTree(billboardGui)
+            
+            print("\n=== SEARCHING FOR KEY ELEMENTS ===")
+            
+            -- Find all frames
+            print("\n[FRAMES] All Frames:")
+            for _, obj in ipairs(billboardGui:GetDescendants()) do
+                if obj:IsA("Frame") then
+                    print("  - " .. obj.Name .. " | Visible: " .. tostring(obj.Visible))
                 end
             end
-        end
-        
-        -- Try to find any ProximityPrompt
-        print("\n=== LOOKING FOR PROXIMITY PROMPTS ===")
-        if rebirth then
-            for _, child in ipairs(rebirth:GetDescendants()) do
-                if child:IsA("ProximityPrompt") then
-                    print("FOUND ProximityPrompt:", child:GetFullName())
-                    print("  Enabled:", child.Enabled)
-                    print("  ObjectText:", child.ObjectText)
-                    print("  ActionText:", child.ActionText)
-                    print("  KeyboardKeyCode:", child.KeyboardKeyCode)
+            
+            -- Find all scrolling frames
+            print("\n[SCROLLINGFRAMES] All ScrollingFrames:")
+            for _, obj in ipairs(billboardGui:GetDescendants()) do
+                if obj:IsA("ScrollingFrame") then
+                    print("  - " .. obj.Name .. " | Visible: " .. tostring(obj.Visible))
+                    print("    Parent: " .. obj.Parent.Name)
                 end
             end
+            
+            -- Find all buttons
+            print("\n[BUTTONS] All Buttons:")
+            for _, obj in ipairs(billboardGui:GetDescendants()) do
+                if obj:IsA("GuiButton") or obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                    local text = obj:IsA("TextButton") and (" | Text: " .. obj.Text) or ""
+                    print("  - " .. obj.Name .. " [" .. obj.ClassName .. "]" .. text)
+                    print("    Visible: " .. tostring(obj.Visible))
+                end
+            end
+            
+            -- Find all TextLabels (might have important text)
+            print("\n[TEXTLABELS] All TextLabels:")
+            for _, obj in ipairs(billboardGui:GetDescendants()) do
+                if obj:IsA("TextLabel") then
+                    print("  - " .. obj.Name .. " | Text: " .. obj.Text)
+                end
+            end
+            
+        else
+            print("[FAILED] Could not find BillboardGui!")
         end
         
         Rayfield:Notify({
-            Title = "Debug Complete",
-            Content = "Check console (F9) for full details",
+            Title = "Exploration Complete",
+            Content = "Check console (F9) - look for ScrollingFrame and buttons",
             Duration = 4,
             Image = nil,
         })
