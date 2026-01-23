@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by Script Hub",
+    LoadingSubtitle = "by N1GGA",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
