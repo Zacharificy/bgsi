@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by N1GGA",
+    LoadingSubtitle = "by GG",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -181,26 +181,88 @@ local function getValidSecretPets()
     return validPets
 end
 
+local function findScrollingFrame(gui)
+    for _, descendant in ipairs(gui:GetDescendants()) do
+        if descendant:IsA("ScrollingFrame") then
+            return descendant
+        end
+    end
+    return nil
+end
+
+local function scrollToFindPet(scrollFrame, targetGUID)
+    if not scrollFrame then return nil end
+    
+    -- Try different scroll positions
+    for scrollPos = 0, 1, 0.1 do
+        scrollFrame.CanvasPosition = Vector2.new(0, scrollFrame.AbsoluteCanvasSize.Y * scrollPos)
+        task.wait(0.1)
+        
+        -- Check if the pet is now visible
+        for _, petButton in ipairs(scrollFrame:GetDescendants()) do
+            if petButton:IsA("GuiButton") or petButton:IsA("TextButton") or petButton:IsA("ImageButton") then
+                local petData = petButton:FindFirstChild("PetGUID") or petButton:GetAttribute("PetGUID")
+                if petData and tostring(petData) == targetGUID then
+                    return petButton
+                end
+            end
+        end
+    end
+    
+    return nil
+end
+
 local function addPetsToRebirthSlots(petGUIDs)
     statusLabel:Set("Status: Adding pets to rebirth slots...")
     
+    -- Wait for the rebirth machine UI to open
+    task.wait(1)
+    
+    local PlayerGui = player:WaitForChild("PlayerGui")
+    
+    -- Try to find the rebirth machine GUI
+    local rebirthGui = PlayerGui:FindFirstChild("RebirthMachine") or PlayerGui:FindFirstChild("RebirthMachineGui") or PlayerGui:FindFirstChild("Rebirth")
+    
+    if not rebirthGui then
+        warn("Could not find rebirth machine GUI")
+        return false
+    end
+    
+    -- Find the scrolling frame for the pet inventory
+    local scrollFrame = findScrollingFrame(rebirthGui)
+    
+    if not scrollFrame then
+        warn("Could not find scrolling frame in rebirth GUI")
+        return false
+    end
+    
+    print("Found scrolling frame:", scrollFrame:GetFullName())
+    
+    -- Click on each of the 5 pets in the inventory
+    local petsAdded = 0
     for i, petGUID in ipairs(petGUIDs) do
         if i > 5 then break end
         
-        local success = pcall(function()
-            Remote:FireServer("RebirthMachine_AddPet", petGUID)
-        end)
+        statusLabel:Set("Status: Finding pet " .. i .. "/5...")
         
-        if success then
-            print("Added pet " .. petGUID .. " to rebirth slot " .. i)
+        -- Scroll to find the pet
+        local petButton = scrollToFindPet(scrollFrame, petGUID)
+        
+        if petButton then
+            -- Simulate clicking the pet
+            for _, connection in pairs(getconnections(petButton.MouseButton1Click)) do
+                connection:Fire()
+            end
+            petsAdded = petsAdded + 1
+            print("Clicked pet " .. i .. ": " .. petGUID)
+            task.wait(0.3)
         else
-            warn("Failed to add pet to rebirth slot " .. i)
+            warn("Could not find pet button for: " .. petGUID)
         end
-        
-        task.wait(0.2)
     end
     
     task.wait(0.5)
+    return petsAdded >= 5
 end
 
 local function useRebirthMachineWithTP(useR)
@@ -254,8 +316,38 @@ local function useRebirthMachineWithTP(useR)
     
     statusLabel:Set("Status: Adding pets to rebirth machine slots...")
     
-    -- Add pets to the rebirth machine's 5 slots
-    addPetsToRebirthSlots(selectedPets)
+    -- Add pets to the rebirth machine's 5 slots by clicking them in the UI
+    local success = addPetsToRebirthSlots(selectedPets)
+    
+    if not success then
+        teleportBack()
+        statusLabel:Set("Status: Failed to add pets to slots")
+        Rayfield:Notify({
+            Title = "Failed",
+            Content = "Could not add pets to rebirth slots",
+            Duration = 3,
+            Image = nil,
+        })
+        return false
+    end
+    
+    statusLabel:Set("Status: Clicking convert button...")
+    
+    -- Find and click the convert button
+    local PlayerGui = player:WaitForChild("PlayerGui")
+    local rebirthGui = PlayerGui:FindFirstChild("RebirthMachine") or PlayerGui:FindFirstChild("RebirthMachineGui") or PlayerGui:FindFirstChild("Rebirth")
+    
+    if rebirthGui then
+        local convertButton = rebirthGui:FindFirstChild("Convert", true) or rebirthGui:FindFirstChild("ConvertButton", true) or rebirthGui:FindFirstChild("CONVERT", true)
+        
+        if convertButton and (convertButton:IsA("GuiButton") or convertButton:IsA("TextButton") or convertButton:IsA("ImageButton")) then
+            for _, connection in pairs(getconnections(convertButton.MouseButton1Click)) do
+                connection:Fire()
+            end
+            print("Clicked convert button")
+            task.wait(1)
+        end
+    end
     
     statusLabel:Set("Status: Using rebirth machine with pets...")
     
