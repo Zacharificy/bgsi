@@ -183,113 +183,12 @@ local function getValidSecretPets()
     return validPets
 end
 
-local function findScrollingFrame(gui)
-    -- Use the exact path we found
-    local billboardGui = game:GetService("Workspace"):FindFirstChild("RebirthMachine")
-    if billboardGui then
-        billboardGui = billboardGui:FindFirstChild("Activation")
-        if billboardGui then
-            billboardGui = billboardGui:FindFirstChild("Root")
-            if billboardGui then
-                billboardGui = billboardGui:FindFirstChild("BillboardGui")
-                if billboardGui then
-                    for _, descendant in ipairs(billboardGui:GetDescendants()) do
-                        if descendant:IsA("ScrollingFrame") then
-                            return descendant
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nil
-end
-
-local function scrollToFindPet(scrollFrame, targetGUID)
-    if not scrollFrame then return nil end
-    
-    -- Try different scroll positions
-    for scrollPos = 0, 1, 0.1 do
-        scrollFrame.CanvasPosition = Vector2.new(0, scrollFrame.AbsoluteCanvasSize.Y * scrollPos)
-        task.wait(0.1)
-        
-        -- Check if the pet is now visible
-        for _, petButton in ipairs(scrollFrame:GetDescendants()) do
-            if petButton:IsA("GuiButton") or petButton:IsA("TextButton") or petButton:IsA("ImageButton") then
-                local petData = petButton:FindFirstChild("PetGUID") or petButton:GetAttribute("PetGUID")
-                if petData and tostring(petData) == targetGUID then
-                    return petButton
-                end
-            end
-        end
-    end
-    
-    return nil
-end
-
-local function addPetsToRebirthSlots(petGUIDs)
-    statusLabel:Set("Status: Adding pets to rebirth slots...")
-    
-    -- Wait for the rebirth machine UI to open
-    task.wait(1)
-    
-    local workspace = game:GetService("Workspace")
-    
-    -- Use the exact path we found
-    local rebirthGui = workspace:FindFirstChild("RebirthMachine")
-    if rebirthGui then
-        rebirthGui = rebirthGui:FindFirstChild("Activation")
-    end
-    if rebirthGui then
-        rebirthGui = rebirthGui:FindFirstChild("Root")
-    end
-    if rebirthGui then
-        rebirthGui = rebirthGui:FindFirstChild("BillboardGui")
-    end
-    
-    if not rebirthGui then
-        warn("Could not find rebirth machine BillboardGui")
+local function useRebirthMachine()
+    if not Remote then
+        statusLabel:Set("Status: Remote not loaded")
         return false
     end
     
-    -- Find the scrolling frame for the pet inventory
-    local scrollFrame = findScrollingFrame(rebirthGui)
-    
-    if not scrollFrame then
-        warn("Could not find scrolling frame in rebirth GUI")
-        return false
-    end
-    
-    print("Found scrolling frame:", scrollFrame:GetFullName())
-    
-    -- Click on each of the 5 pets in the inventory
-    local petsAdded = 0
-    for i, petGUID in ipairs(petGUIDs) do
-        if i > 5 then break end
-        
-        statusLabel:Set("Status: Finding pet " .. i .. "/5...")
-        
-        -- Scroll to find the pet
-        local petButton = scrollToFindPet(scrollFrame, petGUID)
-        
-        if petButton then
-            -- Simulate clicking the pet
-            for _, connection in pairs(getconnections(petButton.MouseButton1Click)) do
-                connection:Fire()
-            end
-            petsAdded = petsAdded + 1
-            print("Clicked pet " .. i .. ": " .. petGUID)
-            task.wait(0.3)
-        else
-            warn("Could not find pet button for: " .. petGUID)
-        end
-    end
-    
-    task.wait(0.5)
-    return petsAdded >= 5
-end
-
-local function useRebirthMachineWithTP(useR)
     statusLabel:Set("Status: Getting valid pets...")
     
     local validPets = getValidSecretPets()
@@ -322,71 +221,12 @@ local function useRebirthMachineWithTP(useR)
         return false
     end
     
-    task.wait(0.5)
-    
-    statusLabel:Set("Status: Opening rebirth machine...")
-    
-    local VIM = game:GetService("VirtualInputManager")
-    local key = useR and Enum.KeyCode.R or Enum.KeyCode.E
-    
-    for i = 1, 15 do
-        VIM:SendKeyEvent(true, key, false, game)
-        task.wait(0.1)
-        VIM:SendKeyEvent(false, key, false, game)
-        task.wait(0.15)
-    end
-    
-    task.wait(0.5)
-    
-    statusLabel:Set("Status: Adding pets to rebirth machine slots...")
-    
-    -- Add pets to the rebirth machine's 5 slots by clicking them in the UI
-    local success = addPetsToRebirthSlots(selectedPets)
-    
-    if not success then
-        teleportBack()
-        statusLabel:Set("Status: Failed to add pets to slots")
-        Rayfield:Notify({
-            Title = "Failed",
-            Content = "Could not add pets to rebirth slots",
-            Duration = 3,
-            Image = nil,
-        })
-        return false
-    end
-    
-    statusLabel:Set("Status: Clicking convert button...")
-    
-    -- Find and click the convert button
-    local workspace = game:GetService("Workspace")
-    local rebirthGui = workspace:FindFirstChild("RebirthMachine")
-    if rebirthGui then
-        rebirthGui = rebirthGui:FindFirstChild("Activation")
-    end
-    if rebirthGui then
-        rebirthGui = rebirthGui:FindFirstChild("Root")
-    end
-    if rebirthGui then
-        rebirthGui = rebirthGui:FindFirstChild("BillboardGui")
-    end
-    
-    if rebirthGui then
-        local convertButton = rebirthGui:FindFirstChild("Convert", true) or rebirthGui:FindFirstChild("ConvertButton", true) or rebirthGui:FindFirstChild("CONVERT", true)
-        
-        if convertButton and (convertButton:IsA("GuiButton") or convertButton:IsA("TextButton") or convertButton:IsA("ImageButton")) then
-            for _, connection in pairs(getconnections(convertButton.MouseButton1Click)) do
-                connection:Fire()
-            end
-            print("Clicked convert button")
-            task.wait(1)
-        end
-    end
+    task.wait(1)
     
     statusLabel:Set("Status: Using rebirth machine with pets...")
     
     local success, result = pcall(function()
-        local args = {"UseRebirthMachine", selectedPets}
-        return game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+        return Remote:InvokeServer("UseRebirthMachine", selectedPets)
     end)
     
     task.wait(0.5)
@@ -414,99 +254,20 @@ local function useRebirthMachineWithTP(useR)
     end
 end
 
-local function useRebirthMachine()
-    if not Remote then
-        statusLabel:Set("Status: Remote not loaded")
-        return false
-    end
-    
-    local validPets = getValidSecretPets()
-    
-    if #validPets < 5 then
-        statusLabel:Set("Status: Not enough pets (" .. #validPets .. "/5)")
-        Rayfield:Notify({
-            Title = "Not Enough Pets",
-            Content = "Need 5 pets, found: " .. #validPets,
-            Duration = 3,
-            Image = nil,
-        })
-        return false
-    end
-    
-    local selectedPets = {}
-    for i = 1, 5 do
-        table.insert(selectedPets, validPets[i])
-    end
-    
-    statusLabel:Set("Status: Attempting to use machine...")
-    
-    local success, result = pcall(function()
-        return Remote:InvokeServer("UseRebirthMachine", selectedPets)
-    end)
-    
-    task.wait(0.5)
-    
-    if success then
-        statusLabel:Set("Status: Machine used successfully!")
-        Rayfield:Notify({
-            Title = "Success",
-            Content = "Rebirth machine used with 5 pets!",
-            Duration = 3,
-            Image = nil,
-        })
-        return true
-    else
-        statusLabel:Set("Status: Machine failed - " .. tostring(result))
-        Rayfield:Notify({
-            Title = "Failed",
-            Content = "Error: " .. tostring(result),
-            Duration = 4,
-            Image = nil,
-        })
-        return false
-    end
-end
-
 RebirthTab:CreateToggle({
-    Name = "Auto Rebirth Machine (R Key)",
+    Name = "Auto Rebirth Machine",
     CurrentValue = false,
-    Flag = "AutoRebirthMachineR",
+    Flag = "AutoRebirthMachine",
     
     Callback = function(Value)
         getgenv().Functions.AutoRebirthMachine = Value
         task.spawn(function()
             while Functions.AutoRebirthMachine do
-                useRebirthMachineWithTP(true)
+                useRebirthMachine()
                 
                 if Functions.AutoRebirthMachine then
                     for i = REBIRTH_INTERVAL, 0, -1 do
                         if not Functions.AutoRebirthMachine then break end
-                        local minutes = math.floor(i / 60)
-                        local seconds = i % 60
-                        statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
-                        task.wait(1)
-                    end
-                end
-            end
-            statusLabel:Set("Status: Disabled")
-        end)
-    end
-})
-
-RebirthTab:CreateToggle({
-    Name = "Auto Rebirth Machine (E Key)",
-    CurrentValue = false,
-    Flag = "AutoRebirthMachineE",
-    
-    Callback = function(Value)
-        getgenv().Functions.AutoRebirthMachineE = Value
-        task.spawn(function()
-            while Functions.AutoRebirthMachineE do
-                useRebirthMachineWithTP(false)
-                
-                if Functions.AutoRebirthMachineE then
-                    for i = REBIRTH_INTERVAL, 0, -1 do
-                        if not Functions.AutoRebirthMachineE then break end
                         local minutes = math.floor(i / 60)
                         local seconds = i % 60
                         statusLabel:Set(string.format("Status: Next use in %02d:%02d", minutes, seconds))
@@ -540,28 +301,13 @@ local IntervalSlider = RebirthTab:CreateSlider({
 local InfoSection = RebirthTab:CreateSection("Information")
 
 RebirthTab:CreateButton({
-    Name = "Use Machine Now (R Key)",
+    Name = "Use Machine Now",
     Callback = function()
-        local success = useRebirthMachineWithTP(true)
+        local success = useRebirthMachine()
         if not success then
             Rayfield:Notify({
                 Title = "Failed",
-                Content = "Could not use machine - check if it exists",
-                Duration = 3,
-                Image = nil,
-            })
-        end
-    end,
-})
-
-RebirthTab:CreateButton({
-    Name = "Use Machine Now (E Key)",
-    Callback = function()
-        local success = useRebirthMachineWithTP(false)
-        if not success then
-            Rayfield:Notify({
-                Title = "Failed",
-                Content = "Could not use machine - check if it exists",
+                Content = "Could not use machine - check console for details",
                 Duration = 3,
                 Image = nil,
             })
@@ -571,133 +317,11 @@ RebirthTab:CreateButton({
 
 RebirthTab:CreateParagraph({
     Title = "How to Use",
-    Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. The script will automatically equip the pets to slots 1-5 before using the machine. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory."
+    Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory. The script will teleport you to the machine and invoke the remote directly."
 })
 
 local UtilityTab = Window:CreateTab("Utility", nil)
 local UtilitySection = UtilityTab:CreateSection("Script Control")
-
-UtilityTab:CreateButton({
-    Name = "Open Machine & Explore GUI",
-    Callback = function()
-        print("=== OPENING REBIRTH MACHINE ===")
-        
-        -- Teleport to machine
-        if not teleportToRebirthMachine() then
-            Rayfield:Notify({
-                Title = "Failed",
-                Content = "Could not teleport to machine",
-                Duration = 3,
-                Image = nil,
-            })
-            return
-        end
-        
-        task.wait(1)
-        
-        -- Press R key to open
-        print("Pressing R key to open machine...")
-        local VIM = game:GetService("VirtualInputManager")
-        for i = 1, 10 do
-            VIM:SendKeyEvent(true, Enum.KeyCode.R, false, game)
-            task.wait(0.1)
-            VIM:SendKeyEvent(false, Enum.KeyCode.R, false, game)
-            task.wait(0.15)
-        end
-        
-        task.wait(2)
-        
-        print("\n=== NOW EXPLORING PlayerGui ===")
-        
-        local PlayerGui = player:WaitForChild("PlayerGui")
-        
-        -- List all GUIs in PlayerGui
-        print("\n=== All GUIs in PlayerGui: ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            print("  " .. gui.Name .. " | Enabled: " .. tostring(gui.Enabled or "N/A"))
-        end
-        
-        -- Look for any GUI with ScrollingFrame
-        print("\n=== Searching for ScrollingFrames ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            for _, child in pairs(gui:GetDescendants()) do
-                if child:IsA("ScrollingFrame") then
-                    print("\n>>> FOUND ScrollingFrame in:", gui.Name)
-                    print("    Full path:", child:GetFullName())
-                    print("    Visible:", child.Visible)
-                    print("    Parent visible:", child.Parent.Visible)
-                end
-            end
-        end
-        
-        -- Look for Convert button
-        print("\n=== Searching for Convert Button ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            for _, child in pairs(gui:GetDescendants()) do
-                if child.Name:lower():find("convert") and (child:IsA("TextButton") or child:IsA("ImageButton")) then
-                    print("\n>>> FOUND Convert Button:", child:GetFullName())
-                end
-            end
-        end
-        
-        Rayfield:Notify({
-            Title = "Exploration Complete",
-            Content = "Check console (F9) for results",
-            Duration = 3,
-            Image = nil,
-        })
-    end,
-})
-
-UtilityTab:CreateButton({
-    Name = "Explore Rebirth GUI",
-    Callback = function()
-        print("=== EXPLORING PlayerGui for Rebirth UI ===")
-        
-        local PlayerGui = player:WaitForChild("PlayerGui")
-        
-        -- List all GUIs in PlayerGui
-        print("\n=== All GUIs in PlayerGui: ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            print("  " .. gui.Name .. " | Class: " .. gui.ClassName)
-        end
-        
-        -- Look for any GUI that might be the rebirth interface
-        print("\n=== Searching for Rebirth-related GUIs ===")
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            if gui.Name:lower():find("rebirth") or gui.Name:lower():find("machine") or gui.Name:lower():find("convert") then
-                print("\n>>> Found potential rebirth GUI:", gui.Name)
-                print("=== All descendants: ===")
-                for _, child in pairs(gui:GetDescendants()) do
-                    print(string.format("  %s | Class: %s", child.Name, child.ClassName))
-                    if child:IsA("ScrollingFrame") then
-                        print("    ^^ THIS IS A SCROLLINGFRAME ^^")
-                    end
-                    if child.Name:lower():find("convert") then
-                        print("    ^^ CONVERT BUTTON FOUND ^^")
-                    end
-                end
-            end
-        end
-        
-        -- Also check for any ScreenGui that was recently added
-        print("\n=== Checking LoadingGui ===")
-        local loadingGui = PlayerGui:FindFirstChild("LoadingGui")
-        if loadingGui then
-            print("LoadingGui exists, descendants:")
-            for _, child in pairs(loadingGui:GetDescendants()) do
-                print(string.format("  %s | Class: %s", child.Name, child.ClassName))
-            end
-        end
-        
-        Rayfield:Notify({
-            Title = "GUI Explored",
-            Content = "Check console (F9) for PlayerGui results",
-            Duration = 3,
-            Image = nil,
-        })
-    end,
-})
 
 UtilityTab:CreateButton({
     Name = "Check Pet Count",
@@ -755,6 +379,31 @@ UtilityTab:CreateButton({
                 Duration = 3,
                 Image = nil,
             })
+        end
+    end,
+})
+
+UtilityTab:CreateButton({
+    Name = "Debug Teleport to Machine",
+    Callback = function()
+        print("=== TELEPORTING TO REBIRTH MACHINE ===")
+        
+        if teleportToRebirthMachine() then
+            Rayfield:Notify({
+                Title = "Success",
+                Content = "Teleported to rebirth machine",
+                Duration = 3,
+                Image = nil,
+            })
+            print("Successfully teleported to machine")
+        else
+            Rayfield:Notify({
+                Title = "Failed",
+                Content = "Could not find rebirth machine",
+                Duration = 3,
+                Image = nil,
+            })
+            print("Failed to find rebirth machine")
         end
     end,
 })
