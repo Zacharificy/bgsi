@@ -515,44 +515,96 @@ UtilityTab:CreateButton({
 })
 
 UtilityTab:CreateButton({
-    Name = "Debug: Find Rebirth GUI",
+    Name = "Debug: Explore Everything",
     Callback = function()
-        print("=== SEARCHING FOR REBIRTH GUI ===")
+        print("\n=== FULL DEBUG SCAN ===\n")
         
         -- Teleport first
+        print("Step 1: Teleporting to machine...")
         if not teleportToRebirthMachine() then
-            print("Failed to teleport")
+            print("❌ Failed to teleport")
             return
         end
+        print("✅ Teleported successfully")
         
-        task.wait(2)
+        task.wait(3) -- Wait longer
         
-        local gui = findRebirthGUI()
-        if gui then
-            print("Found GUI:", gui:GetFullName())
-            print("\n=== All descendants: ===")
-            for _, child in ipairs(gui:GetDescendants()) do
-                if child:IsA("ScrollingFrame") or child:IsA("GuiButton") or child:IsA("TextButton") or child:IsA("ImageButton") then
-                    print(child.ClassName, "-", child:GetFullName())
+        -- Check Workspace
+        print("\n=== WORKSPACE CHECK ===")
+        local workspace = game:GetService("Workspace")
+        local rebirth = workspace:FindFirstChild("RebirthMachine")
+        if rebirth then
+            print("Found RebirthMachine in Workspace")
+            print("Descendants:")
+            for _, child in ipairs(rebirth:GetDescendants()) do
+                print("  ", child:GetFullName())
+                if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+                    print("    ^^ GUI FOUND ^^")
+                    print("    Enabled:", child.Enabled)
+                    print("    All descendants:")
+                    for _, sub in ipairs(child:GetDescendants()) do
+                        print("      ", sub.Name, "-", sub.ClassName)
+                    end
                 end
             end
-            
-            Rayfield:Notify({
-                Title = "GUI Found",
-                Content = "Check console (F9) for details",
-                Duration = 3,
-                Image = nil,
-            })
-        else
-            print("GUI not found!")
-            Rayfield:Notify({
-                Title = "Failed",
-                Content = "Could not find rebirth GUI",
-                Duration = 3,
-                Image = nil,
-            })
         end
         
+        -- Check PlayerGui
+        print("\n=== PLAYERGUI CHECK ===")
+        local PlayerGui = player:WaitForChild("PlayerGui")
+        print("All GUIs in PlayerGui:")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            print("  ", gui.Name, "| Enabled:", gui.Enabled)
+        end
+        
+        print("\n=== LOOKING FOR SCROLLINGFRAMES ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            for _, child in ipairs(gui:GetDescendants()) do
+                if child:IsA("ScrollingFrame") then
+                    print("FOUND ScrollingFrame in:", gui.Name)
+                    print("  Path:", child:GetFullName())
+                    print("  Visible:", child.Visible)
+                    print("  Parent Visible:", child.Parent.Visible)
+                end
+            end
+        end
+        
+        print("\n=== LOOKING FOR CONVERT BUTTONS ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            for _, child in ipairs(gui:GetDescendants()) do
+                if child:IsA("GuiButton") or child:IsA("TextButton") or child:IsA("ImageButton") then
+                    local name = child.Name:lower()
+                    if name:find("convert") or name:find("rebirth") then
+                        print("FOUND Button:", child.Name)
+                        print("  Path:", child:GetFullName())
+                        print("  Visible:", child.Visible)
+                    end
+                end
+            end
+        end
+        
+        -- Try to find any ProximityPrompt
+        print("\n=== LOOKING FOR PROXIMITY PROMPTS ===")
+        if rebirth then
+            for _, child in ipairs(rebirth:GetDescendants()) do
+                if child:IsA("ProximityPrompt") then
+                    print("FOUND ProximityPrompt:", child:GetFullName())
+                    print("  Enabled:", child.Enabled)
+                    print("  ObjectText:", child.ObjectText)
+                    print("  ActionText:", child.ActionText)
+                    print("  KeyboardKeyCode:", child.KeyboardKeyCode)
+                end
+            end
+        end
+        
+        Rayfield:Notify({
+            Title = "Debug Complete",
+            Content = "Check console (F9) for full details",
+            Duration = 4,
+            Image = nil,
+        })
+        
+        task.wait(2)
         teleportBack()
     end,
 })
@@ -560,16 +612,29 @@ UtilityTab:CreateButton({
 UtilityTab:CreateButton({
     Name = "Destroy Script GUI",
     Callback = function()
-        -- Stop all running functions
-        for key, value in pairs(getgenv().Functions) do
-            getgenv().Functions[key] = false
-        end
+        Rayfield:Notify({
+            Title = "Destroying Script",
+            Content = "GUI will close in 2 seconds...",
+            Duration = 2,
+            Image = nil,
+        })
         
-        -- Destroy the Rayfield interface
-        Rayfield:Destroy()
+        task.wait(2)
+        
+        -- Stop all running functions
+        if getgenv().Functions then
+            for key, value in pairs(getgenv().Functions) do
+                getgenv().Functions[key] = false
+            end
+        end
         
         -- Clear global functions
         getgenv().Functions = nil
+        
+        -- Destroy the Rayfield interface
+        pcall(function()
+            Rayfield:Destroy()
+        end)
         
         print("=== SCRIPT DESTROYED ===")
         print("You can now reinject the script without rejoining")
