@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by BOOTYCLAPPA",
+    LoadingSubtitle = "by Script Hub",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -181,6 +181,28 @@ local function getValidSecretPets()
     return validPets
 end
 
+local function addPetsToRebirthSlots(petGUIDs)
+    statusLabel:Set("Status: Adding pets to rebirth slots...")
+    
+    for i, petGUID in ipairs(petGUIDs) do
+        if i > 5 then break end
+        
+        local success = pcall(function()
+            Remote:FireServer("RebirthMachine_AddPet", petGUID)
+        end)
+        
+        if success then
+            print("Added pet " .. petGUID .. " to rebirth slot " .. i)
+        else
+            warn("Failed to add pet to rebirth slot " .. i)
+        end
+        
+        task.wait(0.2)
+    end
+    
+    task.wait(0.5)
+end
+
 local function useRebirthMachineWithTP(useR)
     statusLabel:Set("Status: Getting valid pets...")
     
@@ -230,10 +252,16 @@ local function useRebirthMachineWithTP(useR)
     
     task.wait(0.5)
     
+    statusLabel:Set("Status: Adding pets to rebirth machine slots...")
+    
+    -- Add pets to the rebirth machine's 5 slots
+    addPetsToRebirthSlots(selectedPets)
+    
     statusLabel:Set("Status: Using rebirth machine with pets...")
     
     local success, result = pcall(function()
-        return Remote:InvokeServer("UseRebirthMachine", selectedPets)
+        local args = {"UseRebirthMachine", selectedPets}
+        return game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
     end)
     
     task.wait(0.5)
@@ -418,7 +446,7 @@ RebirthTab:CreateButton({
 
 RebirthTab:CreateParagraph({
     Title = "How to Use",
-    Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory."
+    Content = "This script automatically uses the rebirth machine every hour using 5 Giant Bongo Kitty pets. The script will automatically equip the pets to slots 1-5 before using the machine. Make sure you have at least 5 unequipped, non-shiny, non-mythic Giant Bongo Kitty pets in your inventory."
 })
 
 local UtilityTab = Window:CreateTab("Utility", nil)
