@@ -211,36 +211,59 @@ local function findRebirthGUI()
     return nil
 end
 
-local function clickPetInInventory(petGUID, gui)
-    -- Find the scrolling frame with the pet inventory
-    local scrollFrame = nil
+local function findPetSlots(gui)
+    -- Find all slot buttons (buttons with + icon or that open pet inventory)
+    local slots = {}
+    
     for _, descendant in ipairs(gui:GetDescendants()) do
-        if descendant:IsA("ScrollingFrame") then
-            scrollFrame = descendant
-            break
+        if descendant:IsA("GuiButton") or descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+            -- Look for buttons that might be pet slots
+            local name = descendant.Name:lower()
+            local text = descendant:IsA("TextButton") and descendant.Text or ""
+            
+            -- Check if it's a slot button (has + or is named like a slot)
+            if text:find("+") or name:find("slot") or name:find("pet") then
+                table.insert(slots, descendant)
+            end
         end
     end
     
-    if not scrollFrame then
-        warn("Could not find pet inventory ScrollingFrame")
-        return false
-    end
+    return slots
+end
+
+local function clickPetInInventory(petGUID)
+    -- After clicking a slot, the pet inventory should open (likely in PlayerGui)
+    task.wait(0.5)
     
-    -- Scroll through to find the pet
-    for scrollPos = 0, 1, 0.1 do
-        scrollFrame.CanvasPosition = Vector2.new(0, scrollFrame.AbsoluteCanvasSize.Y * scrollPos)
-        task.wait(0.05)
-        
-        -- Look for the pet button
-        for _, child in ipairs(scrollFrame:GetDescendants()) do
-            if child:IsA("GuiButton") or child:IsA("TextButton") or child:IsA("ImageButton") then
-                local guid = child:FindFirstChild("PetGUID") or child:GetAttribute("PetGUID")
-                if guid and tostring(guid) == petGUID then
-                    -- Found the pet, click it
-                    for _, connection in pairs(getconnections(child.MouseButton1Click)) do
-                        connection:Fire()
+    local PlayerGui = player:WaitForChild("PlayerGui")
+    
+    -- Find the pet inventory GUI that opened
+    for _, gui in pairs(PlayerGui:GetChildren()) do
+        for _, descendant in ipairs(gui:GetDescendants()) do
+            if descendant:IsA("ScrollingFrame") then
+                -- Found a scrolling frame, likely the pet inventory
+                print("Found pet inventory ScrollingFrame:", descendant:GetFullName())
+                
+                -- Scroll through to find the pet
+                for scrollPos = 0, 1, 0.1 do
+                    descendant.CanvasPosition = Vector2.new(0, descendant.AbsoluteCanvasSize.Y * scrollPos)
+                    task.wait(0.05)
+                    
+                    -- Look for the pet button
+                    for _, child in ipairs(descendant:GetDescendants()) do
+                        if child:IsA("GuiButton") or child:IsA("TextButton") or child:IsA("ImageButton") then
+                            local guid = child:FindFirstChild("PetGUID") or child:GetAttribute("PetGUID")
+                            if guid and tostring(guid) == petGUID then
+                                print("Found pet, clicking it:", petGUID)
+                                -- Found the pet, click it
+                                for _, connection in pairs(getconnections(child.MouseButton1Click)) do
+                                    connection:Fire()
+                                end
+                                task.wait(0.3)
+                                return true
+                            end
+                        end
                     end
-                    return true
                 end
             end
         end
@@ -335,7 +358,7 @@ local function useRebirthMachine()
         statusLabel:Set("Status: Could not find rebirth UI")
         Rayfield:Notify({
             Title = "Failed",
-            Content = "Rebirth UI not found - try getting closer to machine manually",
+            Content = "Rebirth UI not found",
             Duration = 4,
             Image = nil,
         })
@@ -344,19 +367,47 @@ local function useRebirthMachine()
     
     print("Found rebirth GUI:", gui:GetFullName())
     
-    -- Step 1: Click each of the 5 pets to add them to slots
-    statusLabel:Set("Status: Adding pets to slots...")
-    for i, petGUID in ipairs(selectedPets) do
+    -- Find the pet slots (buttons with + icon)
+    statusLabel:Set("Status: Finding pet slots...")
+    local slots = findPetSlots(gui)
+    
+    if #slots < 5 then
+        teleportBack()
+        statusLabel:Set("Status: Not enough pet slots found")
+        Rayfield:Notify({
+            Title = "Failed",
+            Content = "Could not find 5 pet slots",
+            Duration = 3,
+            Image = nil,
+        })
+        return false
+    end
+    
+    print("Found", #slots, "pet slots")
+    
+    -- Click each slot and select a pet
+    for i = 1, 5 do
         statusLabel:Set("Status: Adding pet " .. i .. "/5...")
-        if not clickPetInInventory(petGUID, gui) then
-            print("Failed to add pet " .. i)
+        
+        print("Clicking slot", i)
+        -- Click the slot button to open pet inventory
+        for _, connection in pairs(getconnections(slots[i].MouseButton1Click)) do
+            connection:Fire()
         end
-        task.wait(0.3)
+        
+        task.wait(0.5)
+        
+        -- Select the pet from the inventory that opened
+        if not clickPetInInventory(selectedPets[i]) then
+            print("Failed to select pet", i)
+        end
+        
+        task.wait(0.5)
     end
     
     task.wait(0.5)
     
-    -- Step 2: Click the convert button
+    -- Click the convert button
     statusLabel:Set("Status: Clicking convert...")
     if not clickConvertButton(gui) then
         teleportBack()
@@ -366,7 +417,7 @@ local function useRebirthMachine()
     
     task.wait(1)
     
-    -- Step 3: Click the claim button
+    -- Click the claim button
     statusLabel:Set("Status: Claiming reward...")
     clickClaimButton()
     
