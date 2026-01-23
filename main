@@ -580,61 +580,47 @@ local UtilitySection = UtilityTab:CreateSection("Script Control")
 UtilityTab:CreateButton({
     Name = "Explore Rebirth GUI",
     Callback = function()
-        local workspace = game:GetService("Workspace")
-        local rebirthMachine = workspace:FindFirstChild("RebirthMachine")
+        print("=== EXPLORING PlayerGui for Rebirth UI ===")
         
-        if not rebirthMachine then
-            Rayfield:Notify({
-                Title = "Error",
-                Content = "RebirthMachine not found in Workspace!",
-                Duration = 3,
-                Image = nil,
-            })
-            return
+        local PlayerGui = player:WaitForChild("PlayerGui")
+        
+        -- List all GUIs in PlayerGui
+        print("\n=== All GUIs in PlayerGui: ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            print("  " .. gui.Name .. " | Class: " .. gui.ClassName)
         end
         
-        print("=== EXPLORING RebirthMachine in Workspace ===")
-        print("RebirthMachine found:", rebirthMachine:GetFullName())
-        
-        local activation = rebirthMachine:FindFirstChild("Activation")
-        if activation then
-            print("Activation found:", activation:GetFullName())
-            
-            local root = activation:FindFirstChild("Root")
-            if root then
-                print("Root found:", root:GetFullName())
-                
-                local billboardGui = root:FindFirstChild("BillboardGui")
-                if billboardGui then
-                    print("\n=== BillboardGui found:", billboardGui:GetFullName())
-                    print("=== Listing ALL descendants of BillboardGui ===")
-                    
-                    for _, child in pairs(billboardGui:GetDescendants()) do
-                        print(string.format("  %s | Class: %s | Parent: %s", 
-                            child.Name, 
-                            child.ClassName, 
-                            child.Parent.Name))
-                        
-                        if child:IsA("ScrollingFrame") then
-                            print("    ^^ THIS IS A SCROLLINGFRAME ^^")
-                        end
-                        if child:IsA("Frame") then
-                            print("    (This is a Frame)")
-                        end
+        -- Look for any GUI that might be the rebirth interface
+        print("\n=== Searching for Rebirth-related GUIs ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            if gui.Name:lower():find("rebirth") or gui.Name:lower():find("machine") or gui.Name:lower():find("convert") then
+                print("\n>>> Found potential rebirth GUI:", gui.Name)
+                print("=== All descendants: ===")
+                for _, child in pairs(gui:GetDescendants()) do
+                    print(string.format("  %s | Class: %s", child.Name, child.ClassName))
+                    if child:IsA("ScrollingFrame") then
+                        print("    ^^ THIS IS A SCROLLINGFRAME ^^")
                     end
-                else
-                    print("BillboardGui not found in Root")
+                    if child.Name:lower():find("convert") then
+                        print("    ^^ CONVERT BUTTON FOUND ^^")
+                    end
                 end
-            else
-                print("Root not found in Activation")
             end
-        else
-            print("Activation not found in RebirthMachine")
+        end
+        
+        -- Also check for any ScreenGui that was recently added
+        print("\n=== Checking LoadingGui ===")
+        local loadingGui = PlayerGui:FindFirstChild("LoadingGui")
+        if loadingGui then
+            print("LoadingGui exists, descendants:")
+            for _, child in pairs(loadingGui:GetDescendants()) do
+                print(string.format("  %s | Class: %s", child.Name, child.ClassName))
+            end
         end
         
         Rayfield:Notify({
             Title = "GUI Explored",
-            Content = "Check console (F9) for detailed results",
+            Content = "Check console (F9) for PlayerGui results",
             Duration = 3,
             Image = nil,
         })
