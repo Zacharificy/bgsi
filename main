@@ -596,42 +596,45 @@ UtilityTab:CreateButton({
         print("=== EXPLORING RebirthMachine in Workspace ===")
         print("RebirthMachine found:", rebirthMachine:GetFullName())
         
-        -- Find all GUIs (BillboardGui, SurfaceGui)
-        for _, v in pairs(rebirthMachine:GetDescendants()) do
-            if v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then
-                print("\n=== GUI found:", v:GetFullName(), "| Class:", v.ClassName)
+        local activation = rebirthMachine:FindFirstChild("Activation")
+        if activation then
+            print("Activation found:", activation:GetFullName())
+            
+            local root = activation:FindFirstChild("Root")
+            if root then
+                print("Root found:", root:GetFullName())
                 
-                -- Explore this GUI
-                for _, child in pairs(v:GetDescendants()) do
-                    if child:IsA("ScrollingFrame") then
-                        print("  ScrollingFrame:", child:GetFullName())
+                local billboardGui = root:FindFirstChild("BillboardGui")
+                if billboardGui then
+                    print("\n=== BillboardGui found:", billboardGui:GetFullName())
+                    print("=== Listing ALL descendants of BillboardGui ===")
+                    
+                    for _, child in pairs(billboardGui:GetDescendants()) do
+                        print(string.format("  %s | Class: %s | Parent: %s", 
+                            child.Name, 
+                            child.ClassName, 
+                            child.Parent.Name))
+                        
+                        if child:IsA("ScrollingFrame") then
+                            print("    ^^ THIS IS A SCROLLINGFRAME ^^")
+                        end
+                        if child:IsA("Frame") then
+                            print("    (This is a Frame)")
+                        end
                     end
-                    if child.Name:lower():find("convert") then
-                        print("  Convert button:", child:GetFullName())
-                    end
-                    if child.Name:lower():find("pet") then
-                        print("  Pet-related:", child:GetFullName(), "| Class:", child.ClassName)
-                    end
+                else
+                    print("BillboardGui not found in Root")
                 end
+            else
+                print("Root not found in Activation")
             end
-        end
-        
-        -- Look at buttons
-        local buttonCount = 0
-        for _, v in pairs(rebirthMachine:GetDescendants()) do
-            if (v:IsA("ImageButton") or v:IsA("TextButton") or v:IsA("GuiButton")) and buttonCount < 5 then
-                print("\n--- Button:", v:GetFullName())
-                print("  Attributes:", v:GetAttributes())
-                for _, child in pairs(v:GetChildren()) do
-                    print("  Child:", child.Name, "| Class:", child.ClassName)
-                end
-                buttonCount = buttonCount + 1
-            end
+        else
+            print("Activation not found in RebirthMachine")
         end
         
         Rayfield:Notify({
             Title = "GUI Explored",
-            Content = "Check console (F9) for results",
+            Content = "Check console (F9) for detailed results",
             Duration = 3,
             Image = nil,
         })
