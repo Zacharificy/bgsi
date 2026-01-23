@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by CARFDRENAMED",
+    LoadingSubtitle = "by CSAM",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -115,9 +115,6 @@ local function teleportToRebirthMachine()
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoidRootPart then return false end
     
-    local humanoid = character:FindFirstChild("Humanoid")
-    if not humanoid then return false end
-    
     originalPosition = humanoidRootPart.CFrame
     
     local rebirthMachine = findRebirthMachine()
@@ -135,18 +132,8 @@ local function teleportToRebirthMachine()
         return false
     end
     
-    -- Disable physics temporarily to prevent flinging
-    humanoidRootPart.Anchored = true
-    
-    -- Teleport to position
-    humanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 3, 5)
-    
-    task.wait(0.3)
-    
-    -- Re-enable physics
-    humanoidRootPart.Anchored = false
-    humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    humanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    -- Teleport slightly above the ring so player drops down onto it
+    humanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 5, 0)
     
     return true
 end
@@ -157,12 +144,7 @@ local function teleportBack()
         if character then
             local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
             if humanoidRootPart then
-                humanoidRootPart.Anchored = true
                 humanoidRootPart.CFrame = originalPosition
-                task.wait(0.3)
-                humanoidRootPart.Anchored = false
-                humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                humanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
             end
         end
     end
