@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by GG",
+    LoadingSubtitle = "by The Clansmen",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -547,47 +547,48 @@ local UtilitySection = UtilityTab:CreateSection("Script Control")
 UtilityTab:CreateButton({
     Name = "Explore Rebirth GUI",
     Callback = function()
-        local gui = player.PlayerGui:FindFirstChild("LoadingGui")
+        local workspace = game:GetService("Workspace")
+        local rebirthMachine = workspace:FindFirstChild("RebirthMachine")
         
-        if not gui then
+        if not rebirthMachine then
             Rayfield:Notify({
                 Title = "Error",
-                Content = "LoadingGui not found. Open the rebirth machine first!",
+                Content = "RebirthMachine not found in Workspace!",
                 Duration = 3,
                 Image = nil,
             })
             return
         end
         
-        print("=== EXPLORING LoadingGui ===")
+        print("=== EXPLORING RebirthMachine in Workspace ===")
+        print("RebirthMachine found:", rebirthMachine:GetFullName())
         
-        -- Find all ScrollingFrames
-        for _, v in pairs(gui:GetDescendants()) do
-            if v:IsA("ScrollingFrame") then
-                print("ScrollingFrame found:", v:GetFullName())
+        -- Find all GUIs (BillboardGui, SurfaceGui)
+        for _, v in pairs(rebirthMachine:GetDescendants()) do
+            if v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("ScreenGui") then
+                print("\n=== GUI found:", v:GetFullName(), "| Class:", v.ClassName)
+                
+                -- Explore this GUI
+                for _, child in pairs(v:GetDescendants()) do
+                    if child:IsA("ScrollingFrame") then
+                        print("  ScrollingFrame:", child:GetFullName())
+                    end
+                    if child.Name:lower():find("convert") then
+                        print("  Convert button:", child:GetFullName())
+                    end
+                    if child.Name:lower():find("pet") then
+                        print("  Pet-related:", child:GetFullName(), "| Class:", child.ClassName)
+                    end
+                end
             end
         end
         
-        -- Find convert button
-        for _, v in pairs(gui:GetDescendants()) do
-            if v.Name:lower():find("convert") or v.Name == "CONVERT" then
-                print("Convert button found:", v:GetFullName())
-            end
-        end
-        
-        -- Find pet-related frames
-        for _, v in pairs(gui:GetDescendants()) do
-            if v.Name:lower():find("pet") then
-                print("Pet-related:", v:GetFullName(), "| Class:", v.ClassName)
-            end
-        end
-        
-        -- Look at the first few buttons to see how pets are stored
+        -- Look at buttons
         local buttonCount = 0
-        for _, v in pairs(gui:GetDescendants()) do
+        for _, v in pairs(rebirthMachine:GetDescendants()) do
             if (v:IsA("ImageButton") or v:IsA("TextButton") or v:IsA("GuiButton")) and buttonCount < 5 then
                 print("\n--- Button:", v:GetFullName())
-                print("Attributes:", v:GetAttributes())
+                print("  Attributes:", v:GetAttributes())
                 for _, child in pairs(v:GetChildren()) do
                     print("  Child:", child.Name, "| Class:", child.ClassName)
                 end
