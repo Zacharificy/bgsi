@@ -30,7 +30,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "Bubble Gum Simulator",
     LoadingTitle = "BGS Auto Farm",
-    LoadingSubtitle = "by The Clansmen",
+    LoadingSubtitle = "by NIGGER",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "BGSAutoFarm",
@@ -115,6 +115,9 @@ local function teleportToRebirthMachine()
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoidRootPart then return false end
     
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then return false end
+    
     originalPosition = humanoidRootPart.CFrame
     
     local rebirthMachine = findRebirthMachine()
@@ -132,7 +135,19 @@ local function teleportToRebirthMachine()
         return false
     end
     
+    -- Disable physics temporarily to prevent flinging
+    humanoidRootPart.Anchored = true
+    
+    -- Teleport to position
     humanoidRootPart.CFrame = targetCFrame + Vector3.new(0, 3, 5)
+    
+    task.wait(0.3)
+    
+    -- Re-enable physics
+    humanoidRootPart.Anchored = false
+    humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    humanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    
     return true
 end
 
@@ -142,7 +157,12 @@ local function teleportBack()
         if character then
             local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
             if humanoidRootPart then
+                humanoidRootPart.Anchored = true
                 humanoidRootPart.CFrame = originalPosition
+                task.wait(0.3)
+                humanoidRootPart.Anchored = false
+                humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                humanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
             end
         end
     end
@@ -182,9 +202,22 @@ local function getValidSecretPets()
 end
 
 local function findScrollingFrame(gui)
-    for _, descendant in ipairs(gui:GetDescendants()) do
-        if descendant:IsA("ScrollingFrame") then
-            return descendant
+    -- Use the exact path we found
+    local billboardGui = game:GetService("Workspace"):FindFirstChild("RebirthMachine")
+    if billboardGui then
+        billboardGui = billboardGui:FindFirstChild("Activation")
+        if billboardGui then
+            billboardGui = billboardGui:FindFirstChild("Root")
+            if billboardGui then
+                billboardGui = billboardGui:FindFirstChild("BillboardGui")
+                if billboardGui then
+                    for _, descendant in ipairs(billboardGui:GetDescendants()) do
+                        if descendant:IsA("ScrollingFrame") then
+                            return descendant
+                        end
+                    end
+                end
+            end
         end
     end
     return nil
@@ -218,13 +251,22 @@ local function addPetsToRebirthSlots(petGUIDs)
     -- Wait for the rebirth machine UI to open
     task.wait(1)
     
-    local PlayerGui = player:WaitForChild("PlayerGui")
+    local workspace = game:GetService("Workspace")
     
-    -- Try to find the rebirth machine GUI
-    local rebirthGui = PlayerGui:FindFirstChild("RebirthMachine") or PlayerGui:FindFirstChild("RebirthMachineGui") or PlayerGui:FindFirstChild("Rebirth")
+    -- Use the exact path we found
+    local rebirthGui = workspace:FindFirstChild("RebirthMachine")
+    if rebirthGui then
+        rebirthGui = rebirthGui:FindFirstChild("Activation")
+    end
+    if rebirthGui then
+        rebirthGui = rebirthGui:FindFirstChild("Root")
+    end
+    if rebirthGui then
+        rebirthGui = rebirthGui:FindFirstChild("BillboardGui")
+    end
     
     if not rebirthGui then
-        warn("Could not find rebirth machine GUI")
+        warn("Could not find rebirth machine BillboardGui")
         return false
     end
     
@@ -334,8 +376,17 @@ local function useRebirthMachineWithTP(useR)
     statusLabel:Set("Status: Clicking convert button...")
     
     -- Find and click the convert button
-    local PlayerGui = player:WaitForChild("PlayerGui")
-    local rebirthGui = PlayerGui:FindFirstChild("RebirthMachine") or PlayerGui:FindFirstChild("RebirthMachineGui") or PlayerGui:FindFirstChild("Rebirth")
+    local workspace = game:GetService("Workspace")
+    local rebirthGui = workspace:FindFirstChild("RebirthMachine")
+    if rebirthGui then
+        rebirthGui = rebirthGui:FindFirstChild("Activation")
+    end
+    if rebirthGui then
+        rebirthGui = rebirthGui:FindFirstChild("Root")
+    end
+    if rebirthGui then
+        rebirthGui = rebirthGui:FindFirstChild("BillboardGui")
+    end
     
     if rebirthGui then
         local convertButton = rebirthGui:FindFirstChild("Convert", true) or rebirthGui:FindFirstChild("ConvertButton", true) or rebirthGui:FindFirstChild("CONVERT", true)
