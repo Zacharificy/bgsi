@@ -578,6 +578,78 @@ local UtilityTab = Window:CreateTab("Utility", nil)
 local UtilitySection = UtilityTab:CreateSection("Script Control")
 
 UtilityTab:CreateButton({
+    Name = "Open Machine & Explore GUI",
+    Callback = function()
+        print("=== OPENING REBIRTH MACHINE ===")
+        
+        -- Teleport to machine
+        if not teleportToRebirthMachine() then
+            Rayfield:Notify({
+                Title = "Failed",
+                Content = "Could not teleport to machine",
+                Duration = 3,
+                Image = nil,
+            })
+            return
+        end
+        
+        task.wait(1)
+        
+        -- Press R key to open
+        print("Pressing R key to open machine...")
+        local VIM = game:GetService("VirtualInputManager")
+        for i = 1, 10 do
+            VIM:SendKeyEvent(true, Enum.KeyCode.R, false, game)
+            task.wait(0.1)
+            VIM:SendKeyEvent(false, Enum.KeyCode.R, false, game)
+            task.wait(0.15)
+        end
+        
+        task.wait(2)
+        
+        print("\n=== NOW EXPLORING PlayerGui ===")
+        
+        local PlayerGui = player:WaitForChild("PlayerGui")
+        
+        -- List all GUIs in PlayerGui
+        print("\n=== All GUIs in PlayerGui: ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            print("  " .. gui.Name .. " | Enabled: " .. tostring(gui.Enabled or "N/A"))
+        end
+        
+        -- Look for any GUI with ScrollingFrame
+        print("\n=== Searching for ScrollingFrames ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            for _, child in pairs(gui:GetDescendants()) do
+                if child:IsA("ScrollingFrame") then
+                    print("\n>>> FOUND ScrollingFrame in:", gui.Name)
+                    print("    Full path:", child:GetFullName())
+                    print("    Visible:", child.Visible)
+                    print("    Parent visible:", child.Parent.Visible)
+                end
+            end
+        end
+        
+        -- Look for Convert button
+        print("\n=== Searching for Convert Button ===")
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            for _, child in pairs(gui:GetDescendants()) do
+                if child.Name:lower():find("convert") and (child:IsA("TextButton") or child:IsA("ImageButton")) then
+                    print("\n>>> FOUND Convert Button:", child:GetFullName())
+                end
+            end
+        end
+        
+        Rayfield:Notify({
+            Title = "Exploration Complete",
+            Content = "Check console (F9) for results",
+            Duration = 3,
+            Image = nil,
+        })
+    end,
+})
+
+UtilityTab:CreateButton({
     Name = "Explore Rebirth GUI",
     Callback = function()
         print("=== EXPLORING PlayerGui for Rebirth UI ===")
