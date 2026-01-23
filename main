@@ -545,6 +545,66 @@ local UtilityTab = Window:CreateTab("Utility", nil)
 local UtilitySection = UtilityTab:CreateSection("Script Control")
 
 UtilityTab:CreateButton({
+    Name = "Explore Rebirth GUI",
+    Callback = function()
+        local gui = player.PlayerGui:FindFirstChild("LoadingGui")
+        
+        if not gui then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "LoadingGui not found. Open the rebirth machine first!",
+                Duration = 3,
+                Image = nil,
+            })
+            return
+        end
+        
+        print("=== EXPLORING LoadingGui ===")
+        
+        -- Find all ScrollingFrames
+        for _, v in pairs(gui:GetDescendants()) do
+            if v:IsA("ScrollingFrame") then
+                print("ScrollingFrame found:", v:GetFullName())
+            end
+        end
+        
+        -- Find convert button
+        for _, v in pairs(gui:GetDescendants()) do
+            if v.Name:lower():find("convert") or v.Name == "CONVERT" then
+                print("Convert button found:", v:GetFullName())
+            end
+        end
+        
+        -- Find pet-related frames
+        for _, v in pairs(gui:GetDescendants()) do
+            if v.Name:lower():find("pet") then
+                print("Pet-related:", v:GetFullName(), "| Class:", v.ClassName)
+            end
+        end
+        
+        -- Look at the first few buttons to see how pets are stored
+        local buttonCount = 0
+        for _, v in pairs(gui:GetDescendants()) do
+            if (v:IsA("ImageButton") or v:IsA("TextButton") or v:IsA("GuiButton")) and buttonCount < 5 then
+                print("\n--- Button:", v:GetFullName())
+                print("Attributes:", v:GetAttributes())
+                for _, child in pairs(v:GetChildren()) do
+                    print("  Child:", child.Name, "| Class:", child.ClassName)
+                end
+                buttonCount = buttonCount + 1
+            end
+        end
+        
+        Rayfield:Notify({
+            Title = "GUI Explored",
+            Content = "Check console (F9) for results",
+            Duration = 3,
+            Image = nil,
+        })
+    end,
+})
+
+UtilityTab:CreateButton({
     Name = "Check Pet Count",
     Callback = function()
         local data = LocalData:Get()
